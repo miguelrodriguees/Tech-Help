@@ -61,3 +61,9 @@ AtendimentoService verifica propriedade antes de agir, trava o serviço durante 
 Verificação: build, lint e nove testes frontend existentes passaram. Seis testes AtendimentoServiceTest adicionados, NÃO EXECUTADOS. Isso não comprova integração de início/conclusão/avaliação. Backend ainda exige Java 25 e dependências Maven indisponíveis neste ambiente. No computador de Miguel Java 25.0.4 foi confirmado pelo terminal.
 
 Roteiro pendente: técnico contratado inicia; outro técnico recebe 404. Cliente correto confirma; outro cliente recebe 404. Serviço e solicitação ficam concluídos na mesma transação. Cliente avalia, recarrega, e técnico vê nota/comentário reais. Repetir avaliação deve falhar sem duplicar registro. Tentar concluir antes de iniciar e avaliar antes de concluir deve ser recusado. Testar envio simultâneo e perda de resposta. Agendamento de horário, cancelamento e avaliação do cliente pelo técnico não estão conectados nesta etapa.
+
+## Revisão de cadastro/login após entrega da branch
+
+Correções pontuais: DTOs de cadastro validam no servidor nome (120), e-mail (254), telefone (20) e apresentação profissional (3000), alinhados à tela/banco. Cadastro injeta o PasswordEncoder configurado no SecurityConfig, usa Locale.ROOT ao normalizar e-mail e recusa senha acima de 72 bytes UTF-8 antes de chamar BCrypt. A tela bloqueia submissões simultâneas com ref além do estado de carregamento.
+
+Testes: build/lint e nove testes frontend existentes passaram, sem cobertura específica de autenticação. Dois testes CadastroServiceTest adicionados para limite de senha multibyte e duplicidade de e-mail; NÃO EXECUTADOS aqui por limitações Java/Maven. Persistem pendências: teste real sessão/CSRF/CORS, recuperação de senha, verificação de e-mail e tratamento amigável de cadastros concorrentes que conflitem nas chaves únicas. CPF atualmente valida formato de 11 dígitos, não dígitos verificadores. Não considerar autenticação homologada para produção.

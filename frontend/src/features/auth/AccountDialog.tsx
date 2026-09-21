@@ -5,6 +5,7 @@ import { csrfHeaders, entrar, type Conta } from './session';
 
 export default function AccountDialog({onClose,onSuccess,professional=false}: {professional?:boolean;onClose:()=>void;onSuccess:(conta:Conta)=>void}) {
  const dialog=useRef<HTMLDialogElement>(null);
+ const submitting=useRef(false);
  const [register,setRegister]=useState(professional);
  const [role,setRole]=useState(professional?'tecnico':'cliente');
  const [busy,setBusy]=useState(false);
@@ -12,12 +13,12 @@ export default function AccountDialog({onClose,onSuccess,professional=false}: {p
  const [created,setCreated]=useState(false);
  useEffect(()=>{dialog.current?.showModal();},[]);
  async function submit(event:FormEvent<HTMLFormElement>) {
-  event.preventDefault(); if(busy)return;
+  event.preventDefault(); if(submitting.current)return;
   const data=new FormData(event.currentTarget);
   const email=String(data.get('email')).trim().toLowerCase();
   const senha=String(data.get('senha'));
   if(new TextEncoder().encode(senha).length>72){setError('Use uma senha de até 72 bytes (acentos e emojis ocupam mais espaço).');return;}
-  setBusy(true);setError('');
+  submitting.current=true;setBusy(true);setError('');
   try {
    if(register) {
     if(senha!==data.get('confirmacao')){setError('As senhas precisam ser iguais.');return;}
@@ -29,7 +30,7 @@ export default function AccountDialog({onClose,onSuccess,professional=false}: {p
   } catch(err) {
    const status=isAxiosError(err)?err.response?.status:undefined;
    setError(status===401?'E-mail ou senha incorretos, ou conta inativa.':status===403?'Sua sessão de segurança expirou. Tente novamente.':isAxiosError(err)&&typeof err.response?.data?.erro==='string'?err.response.data.erro:status===400?'Confira os campos e tente novamente.':'Não foi possível conectar. Tente novamente em instantes.');
-  } finally {setBusy(false);}
+  } finally {submitting.current=false;setBusy(false);}
  }
  return <dialog className="th-dialog th-account" ref={dialog} onCancel={e=>{if(busy)e.preventDefault();}} onClose={onClose} aria-labelledby="account-title">
  <button className="th-link" type="button" disabled={busy} onClick={onClose}>Fechar</button>

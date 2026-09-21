@@ -14,7 +14,9 @@ import br.com.techhelp.repository.TecnicoRepository;
 import br.com.techhelp.repository.UsuarioPerfilRepository;
 import br.com.techhelp.repository.UsuarioRepository;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,16 +31,17 @@ public class CadastroService {
     private final PerfilRepository perfilRepository;
     private final UsuarioPerfilRepository usuarioPerfilRepository;
 
-    private final BCryptPasswordEncoder passwordEncoder =
-            new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     public CadastroService(
             UsuarioRepository usuarioRepository,
             ClienteRepository clienteRepository,
             TecnicoRepository tecnicoRepository,
             PerfilRepository perfilRepository,
-            UsuarioPerfilRepository usuarioPerfilRepository
+            UsuarioPerfilRepository usuarioPerfilRepository,
+            PasswordEncoder passwordEncoder
     ) {
+        this.passwordEncoder = passwordEncoder;
         this.usuarioRepository = usuarioRepository;
         this.clienteRepository = clienteRepository;
         this.tecnicoRepository = tecnicoRepository;
@@ -155,6 +158,10 @@ public class CadastroService {
             String cpf
     ) {
 
+        // BCrypt limita a senha por bytes; acentos podem ocupar mais de um byte.
+        if (senha.getBytes(StandardCharsets.UTF_8).length > 72) {
+            throw new IllegalArgumentException("A senha excede o limite permitido. Use uma senha menor.");
+        }
         Usuario usuario = new Usuario();
 
         usuario.setNome(
@@ -162,7 +169,7 @@ public class CadastroService {
         );
 
         usuario.setEmail(
-                email.trim().toLowerCase()
+                email.trim().toLowerCase(Locale.ROOT)
         );
 
         usuario.setSenhaHash(
@@ -196,7 +203,7 @@ public class CadastroService {
     ) {
 
         String emailNormalizado =
-                email.trim().toLowerCase();
+                email.trim().toLowerCase(Locale.ROOT);
 
         if (usuarioRepository
                 .existsByEmail(emailNormalizado)) {
