@@ -12,17 +12,17 @@ public record CriarPropostaRequest(
         Long idSolicitacao,
 
         @NotNull
-        Long idTecnico,
-
-        @NotNull
         @Positive
+        @jakarta.validation.constraints.Digits(integer = 10, fraction = 2)
         BigDecimal valor,
 
+        @jakarta.validation.constraints.Size(max = 3000)
         String mensagem,
 
         @PositiveOrZero
         Short prazoEstimadoDias,
 
+        @jakarta.validation.constraints.FutureOrPresent
         LocalDate dataDisponivel
 
 ) {

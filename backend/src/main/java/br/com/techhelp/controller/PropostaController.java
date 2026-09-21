@@ -17,26 +17,33 @@ import org.springframework.web.bind.annotation.*;
 public class PropostaController {
 
     private final PropostaService propostaService;
+    private final br.com.techhelp.service.TecnicoAutenticado tecnico;
 
     public PropostaController(
-            PropostaService propostaService
+            PropostaService propostaService, br.com.techhelp.service.TecnicoAutenticado tecnico
     ) {
         this.propostaService = propostaService;
+        this.tecnico = tecnico;
     }
 
     @PostMapping
     public ResponseEntity<Proposta> criar(
             @Valid
             @RequestBody
-            CriarPropostaRequest dados
+            CriarPropostaRequest dados, java.security.Principal principal
     ) {
 
         Proposta proposta =
-                propostaService.criar(dados);
+                propostaService.criar(dados, tecnico.id(principal));
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(proposta);
+    }
+
+    @GetMapping("/minhas")
+    public List<Proposta> minhas(java.security.Principal principal) {
+        return propostaService.listarPorTecnico(tecnico.id(principal));
     }
 
     @GetMapping("/solicitacao/{idSolicitacao}")

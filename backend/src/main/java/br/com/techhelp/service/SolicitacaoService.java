@@ -33,9 +33,9 @@ public class SolicitacaoService {
         this.enderecoRepository = enderecoRepository;
     }
 
-    public Solicitacao criar(CriarSolicitacaoRequest dados) {
+    public Solicitacao criar(CriarSolicitacaoRequest dados, Long idCliente) {
 
-        if (!clienteRepository.existsById(dados.idCliente())) {
+        if (!clienteRepository.existsById(idCliente)) {
             throw new NoSuchElementException(
                     "Cliente não encontrado"
             );
@@ -66,7 +66,7 @@ public class SolicitacaoService {
                     );
 
             var cliente = clienteRepository
-                    .findById(dados.idCliente())
+                    .findById(idCliente)
                     .orElseThrow(() ->
                             new NoSuchElementException(
                                     "Cliente não encontrado"
@@ -128,7 +128,7 @@ public class SolicitacaoService {
                 new Solicitacao();
 
         solicitacao.setIdCliente(
-                dados.idCliente()
+                idCliente
         );
 
         solicitacao.setIdCategoria(

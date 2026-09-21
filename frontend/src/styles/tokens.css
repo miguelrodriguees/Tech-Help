@@ -1,0 +1,144 @@
+/* ==========================================================================
+   TechHelp — tokens. Direção "Do ruído à conexão".
+   Duas famílias com papéis distintos, paleta grafite/laranja/off-white,
+   e uma escala de superfícies com profundidade real.
+   ========================================================================== */
+
+.techhelp-site {
+  --bg: #08090b;
+  --bg-lift: #0e1013;
+  --panel: #14171b;
+  --panel-2: #1b1f24;
+  --inset: #0b0d10;
+  --ink: #f6f3ec;
+  --ink-read: #c8c6c0;
+  --ink-dim: #9fa1a7;
+  --ink-faint: #6f7178;
+  --line: #24282d;
+  --line-soft: #191d21;
+  --signal: #ff7a33;
+  --signal-soft: #ffb488;
+  --signal-ink: #1a0d05;
+  --signal-deep: #8e3a11;
+  --warm: #15100c;
+  --line-warm: #3f2c1e;
+  --error: #ff9c8d;
+  --error-bg: #26191a;
+  --error-line: #a9503c;
+
+  --r-panel: 18px;
+  --r-card: 10px;
+  --r-control: 8px;
+  --r-chip: 999px;
+
+  --ease: cubic-bezier(.2, .8, .3, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --t-press: .14s;
+  --t-select: .2s;
+  --t-step: .32s;
+  --t-enter: .6s;
+
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --text: Inter, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --container: 1240px;
+  --gutter: clamp(18px, 4vw, 48px);
+
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 15.5px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  -webkit-text-size-adjust: 100%;
+}
+
+.techhelp-site *, .techhelp-site *::before, .techhelp-site *::after { box-sizing: border-box; }
+.techhelp-site [hidden] { display: none !important; }
+.techhelp-site svg { flex-shrink: 0; }
+.techhelp-site button, .techhelp-site input, .techhelp-site textarea { font: inherit; color: inherit; }
+.techhelp-site button, .techhelp-site summary { cursor: pointer; }
+.techhelp-site :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 4px; }
+.techhelp-site h1, .techhelp-site h2, .techhelp-site h3, .techhelp-site h4 { margin: 0; font-weight: 600; }
+
+/* Tipografia: display com personalidade, texto para leitura longa. */
+.th-display {
+  font-family: var(--display);
+  font-size: clamp(40px, 7.4vw, 96px);
+  line-height: .95;
+  letter-spacing: -.042em;
+  font-weight: 700;
+  margin: 0;
+}
+.th-h2 {
+  font-family: var(--display);
+  font-size: clamp(27px, 3.6vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -.032em;
+  font-weight: 700;
+}
+.th-h3 { font-family: var(--display); font-size: 19px; line-height: 1.25; letter-spacing: -.02em; font-weight: 600; }
+.th-lead { font-size: clamp(16.5px, 1.4vw, 19px); line-height: 1.55; color: var(--ink-read); max-width: 44ch; margin: 0; }
+.th-body { font-size: 15.5px; line-height: 1.68; color: var(--ink-dim); margin: 0; max-width: 60ch; }
+.th-micro { font-size: 12.5px; line-height: 1.5; color: var(--ink-faint); margin: 0; }
+.th-seq { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; font-variant-numeric: tabular-nums; color: var(--signal-soft); }
+
+.th-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 48px; padding: 13px 22px;
+  border-radius: var(--r-control); border: 1px solid var(--signal);
+  background: var(--signal); color: var(--signal-ink);
+  font-weight: 600; font-size: 15px; letter-spacing: -.005em;
+  box-shadow: inset 0 1px 0 #ffffff3d, 0 2px 14px #ff7a3326;
+  transition: background var(--t-press) var(--ease), box-shadow var(--t-press) var(--ease), transform var(--t-press) var(--ease);
+}
+.th-button.secondary { background: var(--panel-2); border-color: var(--line); color: var(--ink); box-shadow: none; }
+.th-button[disabled] { opacity: .5; cursor: not-allowed; }
+
+.th-link {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 6px 0;
+  border: 0; background: none; color: var(--signal); font-size: 14.5px;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+}
+.th-link.quiet { color: var(--ink-dim); }
+.th-link.quiet:hover { color: var(--ink); }
+
+.th-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  border-radius: var(--r-chip); border: 1px solid var(--line);
+  background: #ffffff08; color: var(--ink-dim); font-size: 12px; line-height: 1.5; white-space: nowrap;
+}
+.th-chip.live { border-color: #4a3324; color: var(--signal-soft); }
+.th-chip.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); }
+
+.th-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.th-skip {
+  position: fixed; left: 16px; top: -80px; z-index: 60; padding: 12px 16px;
+  border-radius: var(--r-control); background: var(--signal); color: var(--signal-ink);
+  font-weight: 600; text-decoration: none; transition: top var(--t-select) var(--ease);
+}
+.th-skip:focus { top: 14px; }
+
+@keyframes th-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes th-fade { from { opacity: 0; } to { opacity: 1; } }
+.th-enter { animation: th-rise var(--t-enter) var(--ease-out) both; }
+.th-enter-1 { animation-delay: .05s; }
+.th-enter-2 { animation-delay: .15s; }
+.th-enter-3 { animation-delay: .25s; }
+.th-enter-4 { animation-delay: .35s; }
+
+.techhelp-site.th-paused *, .techhelp-site.th-paused *::before, .techhelp-site.th-paused *::after {
+  animation: none !important; transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .techhelp-site *, .techhelp-site *::before, .techhelp-site *::after {
+    animation: none !important; transition: none !important; scroll-behavior: auto !important;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .th-button:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 #ffffff4d, 0 8px 22px #ff7a3333; }
+  .th-button.secondary:hover { background: #22262c; border-color: #363b42; }
+  .th-button:active { transform: translateY(0) scale(.99); }
+}

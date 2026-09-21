@@ -14,25 +14,32 @@ import org.springframework.web.bind.annotation.*;
 public class ServicoController {
 
     private final ServicoService servicoService;
+    private final br.com.techhelp.service.ClienteAutenticado cliente;
 
     public ServicoController(
-            ServicoService servicoService
+            ServicoService servicoService, br.com.techhelp.service.ClienteAutenticado cliente
     ) {
         this.servicoService = servicoService;
+        this.cliente = cliente;
     }
 
     @PostMapping("/aceitar-proposta/{idProposta}")
     public ResponseEntity<Servico> aceitarProposta(
-            @PathVariable Long idProposta
+            @PathVariable Long idProposta, java.security.Principal principal
     ) {
 
         Servico servico =
                 servicoService
-                        .aceitarProposta(idProposta);
+                        .aceitarProposta(idProposta, cliente.id(principal));
 
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(servico);
+    }
+
+    @GetMapping("/meus")
+    public List<Servico> meus(java.security.Principal principal) {
+        return servicoService.listarPorCliente(cliente.id(principal));
     }
 
     @GetMapping("/{idServico}")

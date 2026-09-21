@@ -9,9 +9,6 @@ import java.math.BigDecimal;
 public record CriarSolicitacaoRequest(
 
         @NotNull
-        Long idCliente,
-
-        @NotNull
         Long idCategoria,
 
         Long idEndereco,
@@ -21,6 +18,7 @@ public record CriarSolicitacaoRequest(
         String titulo,
 
         @NotBlank
+        @Size(max = 12000)
         String descricao,
 
         @NotBlank

@@ -18,21 +18,25 @@ public class PropostaService {
     private final PropostaRepository propostaRepository;
     private final SolicitacaoRepository solicitacaoRepository;
     private final TecnicoRepository tecnicoRepository;
+    private final br.com.techhelp.repository.ClienteRepository clienteRepository;
 
     public PropostaService(
             PropostaRepository propostaRepository,
             SolicitacaoRepository solicitacaoRepository,
-            TecnicoRepository tecnicoRepository
+            TecnicoRepository tecnicoRepository,
+            br.com.techhelp.repository.ClienteRepository clienteRepository
     ) {
         this.propostaRepository = propostaRepository;
         this.solicitacaoRepository = solicitacaoRepository;
         this.tecnicoRepository = tecnicoRepository;
+        this.clienteRepository = clienteRepository;
     }
 
-    public Proposta criar(CriarPropostaRequest dados) {
+    @org.springframework.transaction.annotation.Transactional
+    public Proposta criar(CriarPropostaRequest dados, Long idTecnico) {
 
         Solicitacao solicitacao = solicitacaoRepository
-                .findById(dados.idSolicitacao())
+                .buscarParaProposta(dados.idSolicitacao())
                 .orElseThrow(() ->
                         new NoSuchElementException(
                                 "Solicitação não encontrada"
@@ -40,11 +44,17 @@ public class PropostaService {
                 );
 
         if (!tecnicoRepository.existsById(
-                dados.idTecnico()
+                idTecnico
         )) {
             throw new NoSuchElementException(
                     "Técnico não encontrado"
             );
+        }
+
+        var tecnico = tecnicoRepository.findById(idTecnico).orElseThrow();
+        var cliente = clienteRepository.findById(solicitacao.getIdCliente()).orElseThrow();
+        if (tecnico.getIdUsuario().equals(cliente.getIdUsuario())) {
+            throw new IllegalArgumentException("Você não pode enviar proposta ao próprio pedido");
         }
 
         if (!List.of(
@@ -61,7 +71,7 @@ public class PropostaService {
                 propostaRepository
                         .existsByIdSolicitacaoAndIdTecnico(
                                 dados.idSolicitacao(),
-                                dados.idTecnico()
+                                idTecnico
                         );
 
         if (jaExiste) {
@@ -77,7 +87,7 @@ public class PropostaService {
         );
 
         proposta.setIdTecnico(
-                dados.idTecnico()
+                idTecnico
         );
 
         proposta.setValor(

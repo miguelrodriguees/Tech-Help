@@ -43,7 +43,7 @@ public class ServicoService {
 
     @Transactional
     public Servico aceitarProposta(
-            Long idProposta
+            Long idProposta, Long idCliente
     ) {
 
         Proposta proposta =
@@ -55,32 +55,18 @@ public class ServicoService {
                                 )
                         );
 
-        if (!"ENVIADA".equals(
-                proposta.getStatus()
-        )) {
-            throw new IllegalArgumentException(
-                    "Esta proposta não pode ser aceita"
-            );
+        // Mesma trava usada no envio: apenas uma proposta pode vencer por pedido.
+        Solicitacao solicitacao = solicitacaoRepository.buscarParaProposta(proposta.getIdSolicitacao())
+                .orElseThrow(() -> new NoSuchElementException("Solicitação não encontrada"));
+        if (!solicitacao.getIdCliente().equals(idCliente)) {
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND);
         }
-
-        if (servicoRepository
-                .existsByIdProposta(idProposta)) {
-
-            throw new IllegalArgumentException(
-                    "Já existe um serviço para esta proposta"
-            );
+        var existente = servicoRepository.findByIdProposta(idProposta);
+        if (existente.isPresent()) return existente.get(); // Repetição após falha de rede.
+        if (!List.of("ABERTA", "EM_NEGOCIACAO").contains(solicitacao.getStatus())
+                || !"ENVIADA".equals(proposta.getStatus())) {
+            throw new IllegalArgumentException("Este pedido ou proposta não permite contratação");
         }
-
-        Solicitacao solicitacao =
-                solicitacaoRepository
-                        .findById(
-                                proposta.getIdSolicitacao()
-                        )
-                        .orElseThrow(() ->
-                                new NoSuchElementException(
-                                        "Solicitação não encontrada"
-                                )
-                        );
 
         proposta.setStatus(
                 "ACEITA"

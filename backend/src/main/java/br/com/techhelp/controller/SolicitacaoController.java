@@ -17,26 +17,45 @@ import org.springframework.web.bind.annotation.*;
 public class SolicitacaoController {
 
     private final SolicitacaoService solicitacaoService;
+    private final br.com.techhelp.service.ClienteAutenticado clienteAutenticado;
 
     public SolicitacaoController(
-            SolicitacaoService solicitacaoService
+            SolicitacaoService solicitacaoService,
+            br.com.techhelp.service.ClienteAutenticado clienteAutenticado
     ) {
         this.solicitacaoService = solicitacaoService;
+        this.clienteAutenticado = clienteAutenticado;
     }
 
     @PostMapping
     public ResponseEntity<Solicitacao> criar(
             @Valid
             @RequestBody
-            CriarSolicitacaoRequest dados
+            CriarSolicitacaoRequest dados,
+            java.security.Principal principal,
+            @RequestHeader("Idempotency-Key") String chave,
+            jakarta.servlet.http.HttpSession session
     ) {
 
-        Solicitacao solicitacao =
-                solicitacaoService.criar(dados);
+        if (!chave.matches("[a-zA-Z0-9-]{16,80}")) throw new IllegalArgumentException("Chave inválida");
+        Long idCliente = clienteAutenticado.id(principal);
+        synchronized (session) {
+            String atributo = "publicacao:" + idCliente + ":" + chave;
+            var anterior = (Publicacao) session.getAttribute(atributo);
+            if (anterior != null) {
+                if (!anterior.dados().equals(dados)) throw new IllegalArgumentException("Use outra chave para outro pedido");
+                return ResponseEntity.ok(anterior.solicitacao());
+            }
+            var solicitacao = solicitacaoService.criar(dados, idCliente);
+            session.setAttribute(atributo, new Publicacao(dados, solicitacao));
+            return ResponseEntity.status(HttpStatus.CREATED).body(solicitacao);
+        }
+    }
+    private record Publicacao(CriarSolicitacaoRequest dados, Solicitacao solicitacao) {}
 
-        return ResponseEntity
-                .status(HttpStatus.CREATED)
-                .body(solicitacao);
+    @GetMapping("/minhas")
+    public List<Solicitacao> minhas(java.security.Principal principal) {
+        return solicitacaoService.listarPorCliente(clienteAutenticado.id(principal));
     }
 
     @GetMapping("/abertas")

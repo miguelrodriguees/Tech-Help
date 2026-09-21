@@ -9,6 +9,8 @@ interface Props {
   onCategory: () => void;
   onPublish: () => void;
   saved: boolean;
+  publishing?: boolean;
+  publishError?: string;
 }
 
 function Options({ name, title, options, value, onChange }: {
@@ -25,7 +27,7 @@ function Options({ name, title, options, value, onChange }: {
   </fieldset>;
 }
 
-export default function RequestAssistant({ draft, onChange, onHome, onCategory, onPublish, saved }: Props) {
+export default function RequestAssistant({ draft, onChange, onHome, onCategory, onPublish, saved, publishing = false, publishError = '' }: Props) {
   const [stage, setStage] = useState(0);
   const [error, setError] = useState('');
   const heading = useRef<HTMLHeadingElement>(null);
@@ -52,6 +54,7 @@ export default function RequestAssistant({ draft, onChange, onHome, onCategory, 
   }
 
   function publish() {
+    if(publishing)return;
     for (const step of [0, 1]) {
       const invalid = validateStage(draft, step);
       if (invalid) { go(step); setError(invalid); return; }
@@ -72,6 +75,7 @@ export default function RequestAssistant({ draft, onChange, onHome, onCategory, 
     <div className="th-progress-track" aria-hidden="true"><div style={{ width: `${(stage + 1) * 25}%` }} /></div>
     <p className="th-sr-only" role="status">Etapa {stage + 1} de 4: {stages[stage]}</p>
     <form className="th-flow-content" key={stage} onSubmit={event => { event.preventDefault(); if (stage < 3) advance(); else publish(); }}>
+      <fieldset disabled={publishing} style={{border:0,padding:0,minWidth:0}}>
       {stage === 0 && <>
         <p className="th-eyebrow">{draft.area}</p>
         <h1 className="th-form-title" ref={heading} tabIndex={-1}>Vamos entender seu problema.</h1>
@@ -110,13 +114,15 @@ export default function RequestAssistant({ draft, onChange, onHome, onCategory, 
           <div><dt>Atendimento <button type="button" className="th-link" aria-label="Editar atendimento" onClick={() => go(1)}>Editar</button></dt><dd>{draft.mode} · {draft.urgency}<br />{draft.mode === 'Presencial' ? `${draft.city} · ${draft.district}` : 'Sem endereço para atendimento remoto'}</dd></div>
           <div><dt>Detalhes <button type="button" className="th-link" aria-label="Editar detalhes" onClick={() => go(2)}>Editar</button></dt><dd>{draft.details || 'Nenhum detalhe adicional.'}</dd></div>
         </dl>
-        <p className="th-note">A publicação ainda não está disponível. Você já pode preparar e revisar seu pedido; nenhum dado será enviado.</p>
+        <p className="th-note">Ao publicar, seu pedido será salvo na sua conta de cliente. Se necessário, entre antes de confirmar.</p>
       </>}
+      {publishError && <p role="alert" className="th-note th-error">{publishError}</p>}
       {error && <p role="alert" className="th-note th-error">{error}</p>}
       <div className="th-actions">
         <button type="button" className="th-button secondary" onClick={() => stage === 0 ? onCategory() : go(stage - 1)}><ArrowLeft size={16} />Voltar</button>
-        <button className="th-button" type="submit">{stage === 3 ? 'Publicar solicitação' : stage === 2 ? 'Revisar solicitação' : 'Continuar'}{stage === 3 ? <Send size={16} /> : <ArrowRight size={16} />}</button>
+        <button className="th-button" type="submit" disabled={publishing}>{publishing ? 'Publicando…' : stage === 3 ? 'Publicar solicitação' : stage === 2 ? 'Revisar solicitação' : 'Continuar'}{stage === 3 ? <Send size={16} /> : <ArrowRight size={16} />}</button>
       </div>
+      </fieldset>
     </form>
     <p className="th-wizard-meta"><BookmarkCheck size={16} />{saved ? 'Rascunho guardado nesta aba. Fechar a aba encerra este armazenamento.' : 'Respostas preservadas enquanto a página estiver aberta. O navegador não permitiu guardar o rascunho.'}</p>
   </section>;
