@@ -50,7 +50,9 @@ export default function TechWorkspace({onHome,onLogin}:{onHome:()=>void;onLogin:
   <button className="th-link" onClick={onHome} disabled={busy}>Voltar ao início</button>
   <h1 id="tech-title">Sua área profissional</h1>
   <p>Encontre um pedido que você pode atender e apresente suas condições.</p>
-  {loading?<p role="status">Carregando solicitações e propostas…</p>:error?<div role="alert"><p>{error}</p><button className="th-button" onClick={retry}>Tentar novamente</button></div>:<>
+  {loading&&<p role="status">Carregando solicitações e propostas…</p>}
+  {error&&<div role="alert"><p>{error}</p><button className="th-button" onClick={retry}>Tentar novamente</button></div>}
+  <fieldset disabled={busy||loading||Boolean(error)} style={{border:0,padding:0,minWidth:0}}>
    {success&&<p role="status">{success}</p>}
    <h2>Meus atendimentos</h2>
    {!services.length?<p>Você ainda não tem atendimentos contratados.</p>:<div className="th-tech-list">{services.map(service=><ServiceCard key={service.idServico} service={service} role="tecnico" onLogin={onLogin} onChange={updated=>setServices(current=>current.map(s=>s.idServico===updated.idServico?updated:s))}/>)}</div>}
@@ -77,7 +79,7 @@ export default function TechWorkspace({onHome,onLogin}:{onHome:()=>void;onLogin:
    <h2>Minhas propostas</h2>
    {!propostas.length?<p>Você ainda não enviou propostas.</p>:<ul className="th-tech-list">{propostas.map(p=><li className="th-panel th-tech-card" key={p.idProposta}><h3>Pedido #{p.idSolicitacao}</h3><p>{dinheiro.format(p.valor)} · {({ENVIADA:'Enviada',ACEITA:'Aceita',RECUSADA:'Recusada',CANCELADA:'Cancelada'} as Record<string,string>)[p.status]??p.status}</p><p className="th-request-description">{p.mensagem}</p></li>)}</ul>}
    <button className="th-link" disabled={busy} onClick={retry}>Atualizar solicitações e propostas</button>
-  </>}
+  </fieldset>
   {expired&&<button className="th-button" onClick={onLogin}>Entrar novamente</button>}
  </section>;
 }

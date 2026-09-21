@@ -156,7 +156,7 @@ export default function Home() {
         onSignIn={() => {setProfessionalIntent(false);setAccountOpen(true);}}
       />
 
-      {accountOpen && <AccountDialog professional={professionalIntent} onClose={()=>setAccountOpen(false)} onSuccess={account=>{setConta(account);setAccountOpen(false);if((professionalIntent||screen==='technician')&&account.idTecnico)navigate('technician');else if(screen==='requests'||screen==='technician')navigate('home');}} />}
+      {accountOpen && <AccountDialog professional={professionalIntent} onClose={()=>setAccountOpen(false)} onSuccess={account=>{setConta(account);setAccountOpen(false);if(screen==='requests'&&account.idCliente){/* Mantém o pedido aberto ao renovar a sessão. */}else if((professionalIntent||screen==='technician')&&account.idTecnico)navigate('technician');else if(screen==='requests'||screen==='technician')navigate('home');}} />}
       {conta && <div className="th-inner th-session"><span>Olá, {conta.nome}</span>{conta.idTecnico && <button className="th-link" onClick={()=>navigate('technician')}>Área profissional</button>}{conta.idCliente && <button className="th-link" onClick={()=>navigate('requests')}>Minhas solicitações</button>}<button className="th-link" onClick={()=>{sair().then(()=>{setConta(null);setPublished(null);navigate('home');}).catch(()=>setNotice({title:'Não foi possível sair',body:'Tente novamente. Sua sessão ainda pode estar ativa.'}));}}>Sair</button></div>}
       <main id="conteudo" ref={main} tabIndex={-1}>
         {screen === 'technician' && conta?.idTecnico && <TechWorkspace key={conta.idUsuario} onHome={()=>navigate('home')} onLogin={()=>{setProfessionalIntent(false);setAccountOpen(true);}} />}
