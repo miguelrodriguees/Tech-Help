@@ -46,7 +46,7 @@ export default function TechWorkspace({onHome,onLogin}:{onHome:()=>void;onLogin:
   }finally{lock.current=false;setBusy(false);}
  }
  function retry(){setLoading(true);setError('');setExpired(false);setReload(value=>value+1);}
- return <section className="th-wizard th-tech" aria-labelledby="tech-title">
+ return <section className="th-wizard th-workspace th-tech" aria-labelledby="tech-title">
   <button className="th-link" onClick={onHome} disabled={busy}>Voltar ao início</button>
   <h1 id="tech-title">Sua área profissional</h1>
   <p>Encontre um pedido que você pode atender e apresente suas condições.</p>

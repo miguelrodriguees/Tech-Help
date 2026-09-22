@@ -6,7 +6,7 @@ import { toSolicitacaoPayload } from '../features/solicitacao/payload';
 import AccountDialog from '../features/auth/AccountDialog';
 import { sair, type Conta } from '../features/auth/session';
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, CheckCircle2 } from 'lucide-react';
 import { api } from '../services/api.ts';
 import type { Categoria } from '../types/Categoria.ts';
 import { areaFor, draftKey, emptyDraft, parseDraft, type Draft } from '../features/solicitacao/flow.ts';
@@ -150,10 +150,11 @@ export default function Home() {
 
       <SiteHeader
         menuOpen={menuOpen}
+        accountLabel={conta ? (conta.idTecnico ? 'Área profissional' : 'Minhas solicitações') : undefined}
         onToggleMenu={setMenuOpen}
         onBrand={() => navigate('home')}
         onSection={goToSection}
-        onSignIn={() => {setProfessionalIntent(false);setAccountOpen(true);}}
+        onSignIn={() => {if(conta){navigate(conta.idTecnico?'technician':'requests');return;}setProfessionalIntent(false);setAccountOpen(true);}}
       />
 
       {accountOpen && <AccountDialog professional={professionalIntent} onClose={()=>setAccountOpen(false)} onSuccess={account=>{setConta(account);setAccountOpen(false);if(screen==='requests'&&account.idCliente){/* Mantém o pedido aberto ao renovar a sessão. */}else if((professionalIntent||screen==='technician')&&account.idTecnico)navigate('technician');else if(screen==='requests'||screen==='technician')navigate('home');}} />}
@@ -161,7 +162,22 @@ export default function Home() {
       <main id="conteudo" ref={main} tabIndex={-1}>
         {screen === 'technician' && conta?.idTecnico && <TechWorkspace key={conta.idUsuario} onHome={()=>navigate('home')} onLogin={()=>{setProfessionalIntent(false);setAccountOpen(true);}} />}
         {screen === 'requests' && conta?.idCliente && <MyRequests key={conta.idUsuario} onHome={()=>navigate('home')} onCreate={()=>{setPublished(null);navigate('categories');}} onLogin={()=>setAccountOpen(true)} />}
-        {screen === 'request' && published && <section className="th-wizard" role="status"><h1>Solicitação publicada</h1><p>Pedido #{published.idSolicitacao}: {published.titulo}</p><p>Seu pedido foi salvo. Acompanhe as propostas em Minhas solicitações.</p><button className="th-link" onClick={()=>navigate('requests')}>Ver minhas solicitações</button><button className="th-button" onClick={()=>{setPublished(null);sendKey.current=null;navigate('categories');}}>Criar outra solicitação</button><button className="th-link" onClick={()=>navigate('home')}>Voltar à Home</button></section>}
+        {screen === 'request' && published && (
+          <section className="th-wizard th-workspace th-published" aria-labelledby="published-title">
+            <div className="th-panel th-success-panel">
+              <CheckCircle2 className="th-success-icon" size={40} aria-hidden="true" />
+              <p className="th-workspace-kicker" role="status">Pedido #{published.idSolicitacao} salvo com sucesso</p>
+              <h1 id="published-title">Solicitação publicada</h1>
+              <p className="th-published-title">{published.titulo}</p>
+              <p>Acompanhe as propostas e os próximos passos em Minhas solicitações.</p>
+              <div className="th-workspace-actions">
+                <button className="th-button" onClick={()=>navigate('requests')}>Ver minhas solicitações</button>
+                <button className="th-button secondary" onClick={()=>{setPublished(null);sendKey.current=null;navigate('categories');}}>Criar outra solicitação</button>
+                <button className="th-link" onClick={()=>navigate('home')}>Voltar à Home</button>
+              </div>
+            </div>
+          </section>
+        )}
         {screen === 'request' && !published && (
           <RequestAssistant
             draft={draft}

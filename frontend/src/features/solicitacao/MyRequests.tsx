@@ -16,7 +16,7 @@ export default function MyRequests({onHome,onCreate,onLogin}:{onHome:()=>void;on
   }).catch(err=>{if(!controller.signal.aborted)setState({status:isAxiosError(err)&&err.response?.status===401?'expired':'error',pedidos:[]});});
   return()=>controller.abort();
  },[reload]);
- return <section className="th-wizard th-my-requests" aria-labelledby="my-requests-title">
+ return <section className="th-wizard th-workspace th-my-requests" aria-labelledby="my-requests-title">
   <button type="button" className="th-link" onClick={onHome}>Voltar à Home</button>
   <h1 id="my-requests-title">Minhas solicitações</h1>
   <p>Acompanhe os pedidos salvos na sua conta.</p>

@@ -45,14 +45,14 @@ export default function ReceivedOffers({idPedido,onLogin,onStatus}:{idPedido:num
   {expired&&<button className="th-link" onClick={onLogin}>Entrar novamente</button>}
   {loading&&<p role="status">Carregando…</p>}
   <fieldset disabled={loading||busy} style={{border:0,padding:0,minWidth:0}}>
-   {!error&&!offers.length&&<p>Ainda não há propostas para este pedido.</p>}
+   {!loading&&!error&&!offers.length&&<p>Ainda não há propostas para este pedido.</p>}
    {service&&<ServiceCard service={service} role="cliente" onLogin={onLogin} onChange={updated=>{setServices(current=>current.map(s=>s.idServico===updated.idServico?updated:s));if(updated.status==='CONCLUIDO')onStatus('CONCLUIDA');}}/>}
    <ul className="th-tech-list">{offers.map(o=><li className="th-panel th-tech-card" key={o.idProposta}>
     <h4>{o.nomeProfissional}</h4><p><strong>{money.format(o.valor)}</strong> · {statuses[o.status]??o.status}</p>
     <p className="th-request-description">{o.mensagem||'Sem mensagem adicional.'}</p>
     <p>{o.prazoEstimadoDias===null?'Prazo não informado':`Prazo estimado: ${o.prazoEstimadoDias} dia(s)`}</p>
     <p>{o.dataDisponivel?`Disponibilidade sugerida: ${o.dataDisponivel.split('-').reverse().join('/')}`:'Disponibilidade a combinar'}</p>
-    {!service&&o.status==='ENVIADA'&&(confirm===o.idProposta?<div><p>Confirmar esta proposta por {money.format(o.valor)}? As outras propostas enviadas serão recusadas. Nenhum pagamento será realizado pelo site.</p><button className="th-button" disabled={busy} onClick={()=>accept(o)}>{busy?'Confirmando…':'Confirmar contratação'}</button><button className="th-link" disabled={busy} onClick={()=>setConfirm(null)}>Voltar</button></div>:<button className="th-button" disabled={busy} onClick={()=>setConfirm(o.idProposta)}>Escolher proposta</button>)}
+    {!service&&o.status==='ENVIADA'&&(confirm===o.idProposta?<div className="th-confirmation"><p>Confirmar esta proposta por {money.format(o.valor)}? As outras propostas enviadas serão recusadas. Nenhum pagamento será realizado pelo site.</p><button className="th-button" disabled={busy} onClick={()=>accept(o)}>{busy?'Confirmando…':'Confirmar contratação'}</button><button className="th-link" disabled={busy} onClick={()=>setConfirm(null)}>Voltar</button></div>:<button className="th-button" disabled={busy} onClick={()=>setConfirm(o.idProposta)}>Escolher proposta</button>)}
    </li>)}</ul>
   </fieldset>
   <button className="th-link" disabled={busy||loading} onClick={refresh}>Atualizar propostas e atendimento</button>

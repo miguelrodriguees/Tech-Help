@@ -3,6 +3,7 @@ import { Menu, Wrench, X } from 'lucide-react';
 
 interface Props {
   menuOpen: boolean;
+  accountLabel?: string;
   onToggleMenu: (open: boolean) => void;
   onBrand: () => void;
   onSection: (id: string) => void;
@@ -16,7 +17,7 @@ const links = [
   { id: 'profissionais', label: 'Sou profissional' },
 ];
 
-export default function SiteHeader({ menuOpen, onToggleMenu, onBrand, onSection, onSignIn }: Props) {
+export default function SiteHeader({ menuOpen, accountLabel, onToggleMenu, onBrand, onSection, onSignIn }: Props) {
   const toggle = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
 
@@ -59,7 +60,7 @@ export default function SiteHeader({ menuOpen, onToggleMenu, onBrand, onSection,
                 {link.label}
               </button>
             ))}
-            <button type="button" className="th-button secondary" onClick={onSignIn}>Entrar</button>
+            <button type="button" className="th-button secondary" onClick={onSignIn}>{accountLabel ?? 'Entrar'}</button>
           </nav>
 
           <button
@@ -95,7 +96,7 @@ export default function SiteHeader({ menuOpen, onToggleMenu, onBrand, onSection,
               {link.label}
             </button>
           ))}
-          <button type="button" onClick={onSignIn}>Entrar</button>
+          <button type="button" onClick={onSignIn}>{accountLabel ?? 'Entrar'}</button>
         </div>
       </nav>
     </>
