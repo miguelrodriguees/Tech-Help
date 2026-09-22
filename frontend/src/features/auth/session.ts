@@ -1,5 +1,5 @@
 import { api } from '../../services/api';
-export interface Conta { idUsuario: number; idCliente: number | null; idTecnico: number | null; nome: string; email: string }
+export interface Conta { idUsuario: number; idCliente: number | null; idTecnico: number | null; nome: string; email: string; administrador?: boolean }
 export async function csrfHeaders() {
  const { data } = await api.get<{token:string;headerName:string}>('/auth/csrf');
  return { [data.headerName]: data.token };

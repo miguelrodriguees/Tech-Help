@@ -1,3 +1,4 @@
+@import './styles/rental.css';
 /* Ponto de entrada dos estilos. A ordem importa: tokens primeiro. */
 @import './styles/tokens.css';
 @import './styles/home.css';

@@ -15,7 +15,9 @@ public class AuthController {
     private final UsuarioRepository usuarios;
     private final ClienteRepository clientes;
     private final br.com.techhelp.repository.TecnicoRepository tecnicos;
-    public AuthController(UsuarioRepository usuarios, ClienteRepository clientes, br.com.techhelp.repository.TecnicoRepository tecnicos) {
+    private final br.com.techhelp.service.UsuarioAutenticado sessao;
+    public AuthController(UsuarioRepository usuarios, ClienteRepository clientes, br.com.techhelp.repository.TecnicoRepository tecnicos, br.com.techhelp.service.UsuarioAutenticado sessao) {
+        this.sessao=sessao;
         this.usuarios = usuarios;
         this.clientes = clientes;
         this.tecnicos = tecnicos;
@@ -24,7 +26,7 @@ public class AuthController {
     public Map<String, String> csrf(CsrfToken token) {
         return Map.of("token", token.getToken(), "headerName", token.getHeaderName());
     }
-    public record ContaResponse(Long idUsuario, Long idCliente, Long idTecnico, String nome, String email) {}
+    public record ContaResponse(Long idUsuario, Long idCliente, Long idTecnico, String nome, String email, boolean administrador) {}
     @GetMapping("/me")
     public ContaResponse me(Principal principal) {
         var usuario = usuarios.findByEmail(principal.getName())
@@ -32,6 +34,6 @@ public class AuthController {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
         Long idCliente = clientes.findByIdUsuario(usuario.getIdUsuario())
                 .map(c -> c.getIdCliente()).orElse(null);
-        return new ContaResponse(usuario.getIdUsuario(), idCliente, tecnicos.findByIdUsuario(usuario.getIdUsuario()).map(t -> t.getIdTecnico()).orElse(null), usuario.getNome(), usuario.getEmail());
+        return new ContaResponse(usuario.getIdUsuario(), idCliente, tecnicos.findByIdUsuario(usuario.getIdUsuario()).map(t -> t.getIdTecnico()).orElse(null), usuario.getNome(), usuario.getEmail(), sessao.admin(usuario.getIdUsuario()));
     }
 }

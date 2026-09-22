@@ -15,8 +15,14 @@ public class AluguelItem {
     @Column(name = "id_aluguel", nullable = false)
     private Long idAluguel;
 
-    @Column(name = "id_kit", nullable = false)
+    @Column(name = "id_kit")
     private Long idKit;
+
+    @Column(name = "id_ferramenta")
+    private Long idFerramenta;
+
+    public Long getIdFerramenta() { return idFerramenta; }
+    public void setIdFerramenta(Long idFerramenta) { this.idFerramenta = idFerramenta; }
 
     @Column(nullable = false)
     private Integer quantidade = 1;

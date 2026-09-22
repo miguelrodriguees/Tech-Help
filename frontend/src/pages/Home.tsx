@@ -1,3 +1,5 @@
+import RentalWorkspace from '../features/aluguel/RentalWorkspace';
+import RentalAdmin from '../features/aluguel/RentalAdmin';
 import TechWorkspace from '../features/tecnico/TechWorkspace';
 import MyRequests from '../features/solicitacao/MyRequests';
 import { isAxiosError } from 'axios';
@@ -23,7 +25,7 @@ import SiteFooter from '../features/home/SiteFooter.tsx';
 import SiteHeader from '../features/home/SiteHeader.tsx';
 import { parseCatalog, type CatalogState } from '../features/home/catalog.ts';
 
-type Screen = 'home' | 'categories' | 'unsure' | 'request' | 'requests' | 'technician';
+type Screen = 'home' | 'categories' | 'unsure' | 'request' | 'requests' | 'technician' | 'rentals' | 'rental-admin';
 
 function loadDraft(): Draft {
   try { return parseDraft(sessionStorage.getItem(draftKey)); }
@@ -157,9 +159,11 @@ export default function Home() {
         onSignIn={() => {if(conta){navigate(conta.idTecnico?'technician':'requests');return;}setProfessionalIntent(false);setAccountOpen(true);}}
       />
 
-      {accountOpen && <AccountDialog professional={professionalIntent} onClose={()=>setAccountOpen(false)} onSuccess={account=>{setConta(account);setAccountOpen(false);if(screen==='requests'&&account.idCliente){/* Mantém o pedido aberto ao renovar a sessão. */}else if((professionalIntent||screen==='technician')&&account.idTecnico)navigate('technician');else if(screen==='requests'||screen==='technician')navigate('home');}} />}
-      {conta && <div className="th-inner th-session"><span>Olá, {conta.nome}</span>{conta.idTecnico && <button className="th-link" onClick={()=>navigate('technician')}>Área profissional</button>}{conta.idCliente && <button className="th-link" onClick={()=>navigate('requests')}>Minhas solicitações</button>}<button className="th-link" onClick={()=>{sair().then(()=>{setConta(null);setPublished(null);navigate('home');}).catch(()=>setNotice({title:'Não foi possível sair',body:'Tente novamente. Sua sessão ainda pode estar ativa.'}));}}>Sair</button></div>}
+      {accountOpen && <AccountDialog professional={professionalIntent} onClose={()=>setAccountOpen(false)} onSuccess={account=>{setConta(account);setAccountOpen(false);if(screen==='requests'&&account.idCliente){/* Mantém o pedido aberto ao renovar a sessão. */}else if((professionalIntent||screen==='technician')&&account.idTecnico)navigate('technician');else if(screen==='rental-admin'&&!account.administrador)navigate('home');else if(screen==='requests'||screen==='technician')navigate('home');}} />}
+      {conta && <div className="th-inner th-session"><span>Olá, {conta.nome}</span><button className="th-link" onClick={()=>navigate('rentals')}>Meus aluguéis</button>{conta.administrador && <button className="th-link" onClick={()=>navigate('rental-admin')}>Administrar aluguéis</button>}{conta.idTecnico && <button className="th-link" onClick={()=>navigate('technician')}>Área profissional</button>}{conta.idCliente && <button className="th-link" onClick={()=>navigate('requests')}>Minhas solicitações</button>}<button className="th-link" onClick={()=>{sair().then(()=>{setConta(null);setPublished(null);navigate('home');}).catch(()=>setNotice({title:'Não foi possível sair',body:'Tente novamente. Sua sessão ainda pode estar ativa.'}));}}>Sair</button></div>}
       <main id="conteudo" ref={main} tabIndex={-1}>
+        {screen === 'rentals' && <RentalWorkspace conta={conta} onHome={()=>navigate('home')} onLogin={()=>{setProfessionalIntent(false);setAccountOpen(true);}} />}
+        {screen === 'rental-admin' && conta?.administrador && <RentalAdmin key={conta.idUsuario} onHome={()=>navigate('home')} onLogin={()=>{setProfessionalIntent(false);setAccountOpen(true);}} />}
         {screen === 'technician' && conta?.idTecnico && <TechWorkspace key={conta.idUsuario} onHome={()=>navigate('home')} onLogin={()=>{setProfessionalIntent(false);setAccountOpen(true);}} />}
         {screen === 'requests' && conta?.idCliente && <MyRequests key={conta.idUsuario} onHome={()=>navigate('home')} onCreate={()=>{setPublished(null);navigate('categories');}} onLogin={()=>setAccountOpen(true)} />}
         {screen === 'request' && published && (
@@ -258,7 +262,7 @@ export default function Home() {
             />
             <AreaExplorer catalog={catalog} onChoose={choose} onRetry={retry} />
             <NarrativeSection paused={paused} />
-            <RentalSection onAction={() => setNotice({ title: 'Aluguel de ferramentas', body: 'O catálogo e as reservas estão em preparação. Você poderá escolher o equipamento, o período e combinar retirada e devolução.' })} />
+            <RentalSection onAction={() => navigate('rentals')} />
             <ProfessionalsSection onAction={() => {if(conta?.idTecnico)navigate('technician');else if(conta)setNotice({title:'Seu perfil é de cliente',body:'A inclusão de um perfil profissional na mesma conta ainda está em preparação.'});else{setProfessionalIntent(true);setAccountOpen(true);}}} />
             <ClosingSection
               hasDraft={hasDraft}

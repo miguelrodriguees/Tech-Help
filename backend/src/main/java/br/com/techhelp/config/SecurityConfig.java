@@ -34,7 +34,7 @@ public class SecurityConfig {
         // CSRF permanece ativo, inclusive no cadastro, login e logout.
         http.cors(Customizer.withDefaults())
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.GET, "/categorias", "/auth/csrf").permitAll()
+                .requestMatchers(HttpMethod.GET, "/categorias", "/auth/csrf", "/locacao/catalogo").permitAll()
                 .requestMatchers(HttpMethod.POST, "/cadastro/cliente", "/cadastro/tecnico", "/auth/login").permitAll()
                 .requestMatchers("/auth/me").authenticated()
                 .requestMatchers(HttpMethod.GET, "/tecnico/solicitacoes", "/propostas/minhas").authenticated()
@@ -44,6 +44,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/solicitacoes/minhas").authenticated()
                 .requestMatchers(HttpMethod.GET, "/atendimentos/tecnico", "/atendimentos/*/avaliacoes/cliente", "/atendimentos/*/avaliacoes/tecnico").authenticated()
                 .requestMatchers(HttpMethod.POST, "/atendimentos/*/iniciar", "/atendimentos/*/concluir", "/atendimentos/*/avaliacao").authenticated()
+                .requestMatchers("/locacao/**").authenticated()
                 // Liberar cada fluxo apenas junto com sua regra de propriedade dos dados.
                 .anyRequest().denyAll())
             .requestCache(cache -> cache.disable())
