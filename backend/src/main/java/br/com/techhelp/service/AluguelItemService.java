@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.AdicionarItemAluguelRequest;
 import br.com.techhelp.model.Aluguel;
 import br.com.techhelp.model.AluguelItem;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class AluguelItemService {
 
     private final AluguelItemRepository aluguelItemRepository;
@@ -33,6 +36,7 @@ public class AluguelItemService {
     }
 
     @Transactional
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public AluguelItem adicionar(
             Long idAluguel,
             AdicionarItemAluguelRequest request
@@ -98,6 +102,7 @@ public class AluguelItemService {
         return salvo;
     }
 
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public List<AluguelItem> listar(
             Long idAluguel
     ) {
@@ -115,6 +120,7 @@ public class AluguelItemService {
     }
 
     @Transactional
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public void remover(
             Long idAluguel,
             Long idAluguelItem

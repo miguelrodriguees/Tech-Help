@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarEnderecoRequest;
 import br.com.techhelp.model.Endereco;
 import br.com.techhelp.repository.EnderecoRepository;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class EnderecoService {
 
     private final EnderecoRepository enderecoRepository;
@@ -24,6 +27,7 @@ public class EnderecoService {
         this.usuarioRepository = usuarioRepository;
     }
 
+    @PreAuthorize("@acesso.mesmoUsuario(#request.idUsuario())")
     public Endereco criar(
             CriarEnderecoRequest request
     ) {
@@ -57,6 +61,7 @@ public class EnderecoService {
         return enderecoRepository.save(endereco);
     }
 
+    @PreAuthorize("@acesso.endereco(#idEndereco)")
     public Endereco buscarPorId(
             Long idEndereco
     ) {
@@ -69,6 +74,7 @@ public class EnderecoService {
                         ));
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<Endereco> listarPorUsuario(
             Long idUsuario
     ) {
@@ -85,6 +91,7 @@ public class EnderecoService {
                 );
     }
 
+    @PreAuthorize("@acesso.endereco(#idEndereco)")
     public Endereco atualizar(
             Long idEndereco,
             CriarEnderecoRequest request
@@ -119,6 +126,7 @@ public class EnderecoService {
         return enderecoRepository.save(endereco);
     }
 
+    @PreAuthorize("@acesso.endereco(#idEndereco)")
     public void excluir(
             Long idEndereco
     ) {

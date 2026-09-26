@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarSolicitacaoRequest;
 import br.com.techhelp.model.Categoria;
 import br.com.techhelp.model.Solicitacao;
@@ -14,6 +16,7 @@ import java.util.NoSuchElementException;
 import org.springframework.stereotype.Service;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class SolicitacaoService {
 
     private final SolicitacaoRepository solicitacaoRepository;
@@ -33,6 +36,7 @@ public class SolicitacaoService {
         this.enderecoRepository = enderecoRepository;
     }
 
+    @PreAuthorize("@acesso.cliente(#dados.idCliente())")
     public Solicitacao criar(CriarSolicitacaoRequest dados) {
 
         if (!clienteRepository.existsById(dados.idCliente())) {
@@ -171,6 +175,7 @@ public class SolicitacaoService {
                 .save(solicitacao);
     }
 
+    @PreAuthorize("@acesso.profissional()")
     public List<Solicitacao> listarAbertas() {
 
         return solicitacaoRepository
@@ -179,6 +184,7 @@ public class SolicitacaoService {
                 );
     }
 
+    @PreAuthorize("@acesso.cliente(#idCliente)")
     public List<Solicitacao> listarPorCliente(
             Long idCliente
     ) {
@@ -195,6 +201,7 @@ public class SolicitacaoService {
                 );
     }
 
+    @PreAuthorize("@acesso.lerSolicitacao(#id)")
     public Solicitacao buscarPorId(Long id) {
 
         return solicitacaoRepository

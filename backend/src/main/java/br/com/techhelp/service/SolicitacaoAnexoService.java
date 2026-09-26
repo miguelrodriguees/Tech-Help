@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarSolicitacaoAnexoRequest;
 import br.com.techhelp.model.SolicitacaoAnexo;
 import br.com.techhelp.repository.SolicitacaoAnexoRepository;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class SolicitacaoAnexoService {
 
     private final SolicitacaoAnexoRepository anexoRepository;
@@ -24,6 +27,7 @@ public class SolicitacaoAnexoService {
         this.solicitacaoRepository = solicitacaoRepository;
     }
 
+    @PreAuthorize("@acesso.donoSolicitacao(#idSolicitacao)")
     public SolicitacaoAnexo adicionar(
             Long idSolicitacao,
             CriarSolicitacaoAnexoRequest request
@@ -47,6 +51,7 @@ public class SolicitacaoAnexoService {
         return anexoRepository.save(anexo);
     }
 
+    @PreAuthorize("@acesso.lerSolicitacao(#idSolicitacao)")
     public List<SolicitacaoAnexo> listar(
             Long idSolicitacao
     ) {
@@ -63,6 +68,7 @@ public class SolicitacaoAnexoService {
                 );
     }
 
+    @PreAuthorize("@acesso.lerAnexo(#idAnexo)")
     public SolicitacaoAnexo buscarPorId(
             Long idAnexo
     ) {
@@ -75,6 +81,7 @@ public class SolicitacaoAnexoService {
                         ));
     }
 
+    @PreAuthorize("@acesso.donoSolicitacao(#idSolicitacao)")
     public void excluir(
             Long idSolicitacao,
             Long idAnexo

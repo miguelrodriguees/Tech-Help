@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarAluguelRequest;
 import br.com.techhelp.model.Aluguel;
 import br.com.techhelp.model.AluguelItem;
@@ -18,6 +20,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class AluguelService {
 
     private final AluguelRepository aluguelRepository;
@@ -37,6 +40,7 @@ public class AluguelService {
         this.kitRepository = kitRepository;
     }
 
+    @PreAuthorize("@acesso.mesmoUsuario(#request.idUsuario())")
     public Aluguel criar(CriarAluguelRequest request) {
 
         if (!usuarioRepository.existsById(request.idUsuario())) {
@@ -73,6 +77,7 @@ public class AluguelService {
         return aluguelRepository.save(aluguel);
     }
 
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public Aluguel buscarPorId(Long idAluguel) {
 
         return aluguelRepository
@@ -83,6 +88,7 @@ public class AluguelService {
                         ));
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<Aluguel> listarPorUsuario(
             Long idUsuario
     ) {
@@ -158,6 +164,7 @@ public class AluguelService {
     }
 
     @Transactional
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public Aluguel cancelar(Long idAluguel) {
 
         Aluguel aluguel =
