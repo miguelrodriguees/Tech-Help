@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.EnviarMensagemRequest;
 import br.com.techhelp.model.Conversa;
 import br.com.techhelp.model.Mensagem;
@@ -16,6 +18,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class MensagemService {
 
     private final MensagemRepository mensagemRepository;
@@ -35,6 +38,7 @@ public class MensagemService {
         this.usuarioRepository = usuarioRepository;
     }
 
+    @PreAuthorize("@acesso.mesmoUsuario(#request.idUsuario()) and @acesso.conversa(#idConversa) and (#request.tipo() == null or !#request.tipo().equalsIgnoreCase('SISTEMA'))")
     public Mensagem enviar(
             Long idConversa,
             EnviarMensagemRequest request
@@ -115,6 +119,7 @@ public class MensagemService {
         return mensagemRepository.save(mensagem);
     }
 
+    @PreAuthorize("@acesso.mesmoUsuario(#idUsuario) and @acesso.conversa(#idConversa)")
     public List<Mensagem> listar(
             Long idConversa,
             Long idUsuario

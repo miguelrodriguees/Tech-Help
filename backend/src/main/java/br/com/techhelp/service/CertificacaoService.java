@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarCertificacaoRequest;
 import br.com.techhelp.model.Certificacao;
 import br.com.techhelp.repository.CertificacaoRepository;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class CertificacaoService {
 
     private final CertificacaoRepository certificacaoRepository;
@@ -23,6 +26,7 @@ public class CertificacaoService {
         this.tecnicoRepository = tecnicoRepository;
     }
 
+    @PreAuthorize("@acesso.tecnico(#request.idTecnico())")
     public Certificacao criar(
             CriarCertificacaoRequest request
     ) {
@@ -75,6 +79,7 @@ public class CertificacaoService {
         return certificacaoRepository.save(certificacao);
     }
 
+    @PreAuthorize("permitAll()")
     public List<Certificacao> listarPorTecnico(
             Long idTecnico
     ) {
@@ -91,6 +96,7 @@ public class CertificacaoService {
                 );
     }
 
+    @PreAuthorize("@acesso.certificacao(#idCertificacao)")
     public void excluir(Long idCertificacao) {
 
         Certificacao certificacao =

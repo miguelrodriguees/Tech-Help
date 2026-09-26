@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CadastrarClienteRequest;
 import br.com.techhelp.dto.CadastrarTecnicoRequest;
 import br.com.techhelp.dto.CadastroResponse;
@@ -14,13 +16,14 @@ import br.com.techhelp.repository.TecnicoRepository;
 import br.com.techhelp.repository.UsuarioPerfilRepository;
 import br.com.techhelp.repository.UsuarioRepository;
 
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class CadastroService {
 
     private final UsuarioRepository usuarioRepository;
@@ -29,17 +32,18 @@ public class CadastroService {
     private final PerfilRepository perfilRepository;
     private final UsuarioPerfilRepository usuarioPerfilRepository;
 
-    private final BCryptPasswordEncoder passwordEncoder =
-            new BCryptPasswordEncoder();
+    private final PasswordEncoder passwordEncoder;
 
     public CadastroService(
             UsuarioRepository usuarioRepository,
             ClienteRepository clienteRepository,
             TecnicoRepository tecnicoRepository,
             PerfilRepository perfilRepository,
-            UsuarioPerfilRepository usuarioPerfilRepository
+            UsuarioPerfilRepository usuarioPerfilRepository,
+            PasswordEncoder passwordEncoder
     ) {
         this.usuarioRepository = usuarioRepository;
+        this.passwordEncoder = passwordEncoder;
         this.clienteRepository = clienteRepository;
         this.tecnicoRepository = tecnicoRepository;
         this.perfilRepository = perfilRepository;
@@ -48,6 +52,7 @@ public class CadastroService {
     }
 
     @Transactional
+    @PreAuthorize("permitAll()")
     public CadastroResponse cadastrarCliente(
             CadastrarClienteRequest request
     ) {
@@ -92,6 +97,7 @@ public class CadastroService {
     }
 
     @Transactional
+    @PreAuthorize("permitAll()")
     public CadastroResponse cadastrarTecnico(
             CadastrarTecnicoRequest request
     ) {

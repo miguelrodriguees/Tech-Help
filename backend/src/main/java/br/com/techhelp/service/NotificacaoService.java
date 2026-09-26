@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarNotificacaoRequest;
 import br.com.techhelp.model.Notificacao;
 import br.com.techhelp.repository.NotificacaoRepository;
@@ -11,6 +13,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class NotificacaoService {
 
     private final NotificacaoRepository notificacaoRepository;
@@ -46,6 +49,7 @@ public class NotificacaoService {
         return notificacaoRepository.save(notificacao);
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<Notificacao> listarPorUsuario(
             Long idUsuario
     ) {
@@ -58,6 +62,7 @@ public class NotificacaoService {
                 );
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<Notificacao> listarNaoLidas(
             Long idUsuario
     ) {
@@ -70,6 +75,7 @@ public class NotificacaoService {
                 );
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public long contarNaoLidas(
             Long idUsuario
     ) {
@@ -80,6 +86,7 @@ public class NotificacaoService {
                 .countByIdUsuarioAndLidaFalse(idUsuario);
     }
 
+    @PreAuthorize("@acesso.notificacao(#idNotificacao)")
     public Notificacao marcarComoLida(
             Long idNotificacao
     ) {

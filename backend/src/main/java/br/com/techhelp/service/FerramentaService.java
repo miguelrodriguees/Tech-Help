@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarFerramentaRequest;
 import br.com.techhelp.model.Ferramenta;
 import br.com.techhelp.repository.FerramentaRepository;
@@ -9,6 +11,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class FerramentaService {
 
     private final FerramentaRepository ferramentaRepository;
@@ -52,10 +55,12 @@ public class FerramentaService {
         return ferramentaRepository.save(ferramenta);
     }
 
+    @PreAuthorize("permitAll()")
     public List<Ferramenta> listar() {
         return ferramentaRepository.findAll();
     }
 
+    @PreAuthorize("permitAll()")
     public List<Ferramenta> listarDisponiveis() {
 
         return ferramentaRepository
@@ -65,6 +70,7 @@ public class FerramentaService {
                 );
     }
 
+    @PreAuthorize("permitAll()")
     public Ferramenta buscarPorId(
             Long idFerramenta
     ) {

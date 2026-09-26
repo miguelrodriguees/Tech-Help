@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.AdicionarFerramentaKitRequest;
 import br.com.techhelp.model.Ferramenta;
 import br.com.techhelp.model.KitFerramenta;
@@ -13,6 +15,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class KitFerramentaService {
 
     private final KitFerramentaRepository kitFerramentaRepository;
@@ -81,6 +84,7 @@ public class KitFerramentaService {
         return kitFerramentaRepository.save(item);
     }
 
+    @PreAuthorize("permitAll()")
     public List<KitFerramenta> listar(
             Long idKit
     ) {

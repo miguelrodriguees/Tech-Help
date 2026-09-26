@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.VincularPerfilRequest;
 import br.com.techhelp.model.Perfil;
 import br.com.techhelp.model.UsuarioPerfil;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class PerfilService {
 
     private final PerfilRepository perfilRepository;
@@ -87,6 +90,7 @@ public class PerfilService {
         );
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<UsuarioPerfil> listarPorUsuario(
             Long idUsuario
     ) {

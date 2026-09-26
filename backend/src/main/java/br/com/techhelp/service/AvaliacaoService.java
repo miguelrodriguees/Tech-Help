@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarAvaliacaoRequest;
 import br.com.techhelp.model.Avaliacao;
 import br.com.techhelp.model.Cliente;
@@ -15,6 +17,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class AvaliacaoService {
 
     private final AvaliacaoRepository avaliacaoRepository;
@@ -34,6 +37,7 @@ public class AvaliacaoService {
         this.tecnicoRepository = tecnicoRepository;
     }
 
+    @PreAuthorize("@acesso.mesmoUsuario(#request.idAvaliador()) and @acesso.servico(#request.idServico())")
     public Avaliacao criar(CriarAvaliacaoRequest request) {
 
         Servico servico = servicoRepository
@@ -119,6 +123,7 @@ public class AvaliacaoService {
         return avaliacaoRepository.save(avaliacao);
     }
 
+    @PreAuthorize("permitAll()")
     public List<Avaliacao> listarPorUsuario(
             Long idUsuario
     ) {
@@ -128,6 +133,7 @@ public class AvaliacaoService {
                 );
     }
 
+    @PreAuthorize("@acesso.servico(#idServico)")
     public List<Avaliacao> listarPorServico(
             Long idServico
     ) {
