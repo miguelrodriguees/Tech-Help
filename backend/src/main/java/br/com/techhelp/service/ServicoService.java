@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.model.Proposta;
 import br.com.techhelp.model.Servico;
 import br.com.techhelp.model.Solicitacao;
@@ -19,6 +21,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class ServicoService {
 
     private final ServicoRepository servicoRepository;
@@ -42,6 +45,7 @@ public class ServicoService {
     }
 
     @Transactional
+    @PreAuthorize("@acesso.aceitarProposta(#idProposta)")
     public Servico aceitarProposta(
             Long idProposta
     ) {
@@ -148,6 +152,7 @@ public class ServicoService {
         );
     }
 
+    @PreAuthorize("@acesso.servico(#idServico)")
     public Servico buscarPorId(
             Long idServico
     ) {
@@ -162,6 +167,7 @@ public class ServicoService {
     }
 
     @Transactional
+    @PreAuthorize("@acesso.executarServico(#idServico)")
     public Servico iniciarServico(
             Long idServico
     ) {
@@ -192,6 +198,7 @@ public class ServicoService {
     }
 
     @Transactional
+    @PreAuthorize("@acesso.executarServico(#idServico)")
     public Servico concluirServico(
             Long idServico
     ) {
@@ -251,6 +258,7 @@ public class ServicoService {
         );
     }
 
+    @PreAuthorize("@acesso.cliente(#idCliente)")
     public List<Servico> listarPorCliente(
             Long idCliente
     ) {
@@ -270,6 +278,7 @@ public class ServicoService {
                 );
     }
 
+    @PreAuthorize("@acesso.tecnico(#idTecnico)")
     public List<Servico> listarPorTecnico(
             Long idTecnico
     ) {

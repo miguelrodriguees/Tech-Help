@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarPagamentoRequest;
 import br.com.techhelp.model.Pagamento;
 import br.com.techhelp.repository.AluguelRepository;
@@ -16,6 +18,7 @@ import java.util.UUID;
 import java.time.LocalDateTime; 
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class PagamentoService {
 
     private final PagamentoRepository pagamentoRepository;
@@ -115,6 +118,7 @@ public class PagamentoService {
         );
     }
 
+    @PreAuthorize("@acesso.pagamento(#idPagamento)")
     public Pagamento buscarPorId(
             Long idPagamento
     ) {
@@ -127,6 +131,7 @@ public class PagamentoService {
                         ));
     }
 
+    @PreAuthorize("@acesso.servico(#idServico)")
     public List<Pagamento> listarPorServico(
             Long idServico
     ) {
@@ -137,6 +142,7 @@ public class PagamentoService {
                 );
     }
 
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public List<Pagamento> listarPorAluguel(
             Long idAluguel
     ) {

@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.VincularEspecialidadeRequest;
 import br.com.techhelp.model.Especialidade;
 import br.com.techhelp.model.TecnicoEspecialidade;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class TecnicoEspecialidadeService {
 
     private final TecnicoEspecialidadeRepository tecnicoEspecialidadeRepository;
@@ -28,6 +31,7 @@ public class TecnicoEspecialidadeService {
         this.especialidadeRepository = especialidadeRepository;
     }
 
+    @PreAuthorize("@acesso.tecnico(#request.idTecnico())")
     public TecnicoEspecialidade vincular(
             VincularEspecialidadeRequest request
     ) {
@@ -69,6 +73,7 @@ public class TecnicoEspecialidadeService {
         return tecnicoEspecialidadeRepository.save(vinculo);
     }
 
+    @PreAuthorize("permitAll()")
     public List<Especialidade> listarEspecialidadesDoTecnico(
             Long idTecnico
     ) {

@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarKitRequest;
 import br.com.techhelp.model.Kit;
 import br.com.techhelp.repository.KitRepository;
@@ -9,6 +11,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class KitService {
 
     private final KitRepository kitRepository;
@@ -41,10 +44,12 @@ public class KitService {
         return kitRepository.save(kit);
     }
 
+    @PreAuthorize("permitAll()")
     public List<Kit> listar() {
         return kitRepository.findAll();
     }
 
+    @PreAuthorize("permitAll()")
     public List<Kit> listarDisponiveis() {
 
         return kitRepository
@@ -53,6 +58,7 @@ public class KitService {
                 );
     }
 
+    @PreAuthorize("permitAll()")
     public Kit buscarPorId(Long idKit) {
 
         return kitRepository
