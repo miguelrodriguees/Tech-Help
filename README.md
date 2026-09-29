@@ -1,4 +1,4 @@
-# TechHelp
+# TechHel
 
 O TechHelp é um projeto desenvolvido para conectar clientes a profissionais de TI.
 
