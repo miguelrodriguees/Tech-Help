@@ -1,6 +1,3 @@
--- TechHelp V2 - Banco de dados MariaDB / MySQL Workbench
-
-
 CREATE DATABASE IF NOT EXISTS tech_help
     CHARACTER SET utf8mb4
     COLLATE utf8mb4_general_ci;
