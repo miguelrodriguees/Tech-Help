@@ -28,6 +28,6 @@ A plataforma permite que clientes publiquem solicitações de serviços e que t�
 
 ## Status
 
-- Backend em desenvolvimento
+- Backend em desenvolvido
 - Banco de dados configurado
 - Frontend em desenvolvimento
