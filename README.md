@@ -10,7 +10,6 @@ A plataforma permite que clientes publiquem solicitações de serviços e que t�
 - Java
 - Spring Boot
 - Spring Data JPA
-- MariaDB
 
 ### Frontend
 - React
@@ -18,6 +17,7 @@ A plataforma permite que clientes publiquem solicitações de serviços e que t�
 - Vite
 
 ### Banco de dados
+- MySQL
 - MariaDB
 
 ## Estrutura
