@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarPropostaRequest;
 import br.com.techhelp.model.Proposta;
 import br.com.techhelp.model.Solicitacao;
@@ -11,8 +13,10 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class PropostaService {
 
     private final PropostaRepository propostaRepository;
@@ -29,6 +33,8 @@ public class PropostaService {
         this.tecnicoRepository = tecnicoRepository;
     }
 
+    @PreAuthorize("@acesso.tecnico(#dados.idTecnico())")
+    @Transactional
     public Proposta criar(CriarPropostaRequest dados) {
 
         Solicitacao solicitacao = solicitacaoRepository
@@ -119,6 +125,7 @@ public class PropostaService {
         return salva;
     }
 
+    @PreAuthorize("@acesso.donoSolicitacao(#idSolicitacao)")
     public List<Proposta> listarPorSolicitacao(
             Long idSolicitacao
     ) {
@@ -137,6 +144,7 @@ public class PropostaService {
                 );
     }
 
+    @PreAuthorize("@acesso.tecnico(#idTecnico)")
     public List<Proposta> listarPorTecnico(
             Long idTecnico
     ) {

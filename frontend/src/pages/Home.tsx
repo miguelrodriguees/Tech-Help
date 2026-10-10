@@ -1,918 +1,150 @@
-import { useEffect, useMemo, useState, type ElementType } from "react";
-import {
-  Activity,
-  ArrowRight,
-  BadgeCheck,
-  Boxes,
-  Cable,
-  Check,
-  ChevronRight,
-  CircleCheck,
-  Clock3,
-  Cpu,
-  Database,
-  HardDrive,
-  Laptop,
-  MapPin,
-  MessageSquareText,
-  Network,
-  PackageOpen,
-  Printer,
-  Router,
-  Search,
-  Server,
-  ShieldCheck,
-  SlidersHorizontal,
-  Star,
-  Terminal,
-  UserRoundCheck,
-  Wrench,
-} from "lucide-react";
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, CircleHelp, Menu, Pause, Play, Wrench, X } from 'lucide-react';
+import { api, errorMessage, getSession, postProtected, statusOf, type Session, type ServiceRequest } from '../services/api';
+import AuthDialog from '../features/auth/AuthDialog';
+import MyRequests from '../features/solicitacao/MyRequests';
+import TechnicianBoard from '../features/propostas/TechnicianBoard';
+import { requestPayload } from '../features/solicitacao/publication';
+import type { Categoria } from '../types/Categoria';
+import RequestAssistant from '../features/solicitacao/RequestAssistant';
+import { areaFor, draftKey, emptyDraft, parseDraft, type Draft } from '../features/solicitacao/flow';
+import Landing from '../features/home/Landing';
 
-import { api } from "../services/api";
-import type { Categoria } from "../types/Categoria";
-
-type ApiStatus = "checking" | "online" | "demo";
-
-const categoriasFallback: Categoria[] = [
-  {
-    idCategoria: 1,
-    nome: "Hardware",
-    descricao: "Diagnóstico, manutenção, montagem e upgrades.",
-    ativo: true,
-    dataCadastro: null,
-  },
-  {
-    idCategoria: 2,
-    nome: "Software",
-    descricao: "Instalação, configuração e suporte de sistemas.",
-    ativo: true,
-    dataCadastro: null,
-  },
-  {
-    idCategoria: 3,
-    nome: "Redes",
-    descricao: "Wi-Fi, roteadores, switches e conectividade.",
-    ativo: true,
-    dataCadastro: null,
-  },
-  {
-    idCategoria: 4,
-    nome: "Segurança",
-    descricao: "Proteção, configuração e análise de ambientes.",
-    ativo: true,
-    dataCadastro: null,
-  },
-  {
-    idCategoria: 5,
-    nome: "Servidores e Cloud",
-    descricao: "Servidores locais, serviços e ambientes em nuvem.",
-    ativo: true,
-    dataCadastro: null,
-  },
-  {
-    idCategoria: 6,
-    nome: "Periféricos",
-    descricao: "Impressoras, dispositivos e equipamentos de apoio.",
-    ativo: true,
-    dataCadastro: null,
-  },
-];
-
-function getCategoriaIcon(nome: string): ElementType {
-  const valor = nome.toUpperCase();
-
-  if (valor.includes("HARDWARE")) return HardDrive;
-  if (valor.includes("SOFTWARE")) return Cpu;
-  if (valor.includes("REDE")) return Network;
-  if (valor.includes("SEGUR")) return ShieldCheck;
-  if (valor.includes("SERVID") || valor.includes("CLOUD")) return Server;
-  if (valor.includes("IMPRESS") || valor.includes("PERIF")) return Printer;
-
-  return Boxes;
+type Catalog = { status: 'loading' | 'ready' | 'error'; categories: Categoria[] };
+type Screen = 'home' | 'categories' | 'unsure' | 'request' | 'requests' | 'published' | 'technician';
+const navigation = [['servicos', 'Serviços'], ['como-funciona', 'Como funciona'], ['ferramentas', 'Aluguel de ferramentas'], ['profissionais', 'Sou profissional']];
+function loadDraft(): Draft {
+  try { return parseDraft(sessionStorage.getItem(draftKey)); }
+  catch { return emptyDraft(); }
 }
 
-function Home() {
-  const [categorias, setCategorias] =
-    useState<Categoria[]>(categoriasFallback);
-
-  const [apiStatus, setApiStatus] =
-    useState<ApiStatus>("checking");
+export default function Home() {
+  const [catalog, setCatalog] = useState<Catalog>({ status: 'loading', categories: [] });
+  const [reload, setReload] = useState(0);
+  const [draft, setDraft] = useState<Draft>(loadDraft);
+  const [saved, setSaved] = useState(() => { try { return sessionStorage.getItem(draftKey) !== null; } catch { return false; } });
+  const [screen, setScreen] = useState<Screen>('home');
+  const [menu, setMenu] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [message, setMessage] = useState({ title: '', body: '' });
+  const dialog = useRef<HTMLDialogElement>(null);
+  const main = useRef<HTMLElement>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [sessionError, setSessionError] = useState('');
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authProfessional, setAuthProfessional] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [publishError, setPublishError] = useState('');
+  const [uncertain, setUncertain] = useState(false);
+  const [published, setPublished] = useState<ServiceRequest | null>(null);
+  const operation = useRef(false);
 
   useEffect(() => {
-    let ativo = true;
-
-    async function carregarCategorias() {
-      try {
-        const resposta =
-          await api.get<Categoria[]>("/categorias");
-
-        if (!ativo) return;
-
-        const categoriasAtivas =
-          resposta.data.filter((categoria) => categoria.ativo);
-
-        if (categoriasAtivas.length > 0) {
-          setCategorias(categoriasAtivas);
-        }
-
-        setApiStatus("online");
-      } catch {
-        if (!ativo) return;
-
-        setCategorias(categoriasFallback);
-        setApiStatus("demo");
-      }
-    }
-
-    carregarCategorias();
-
-    return () => {
-      ativo = false;
-    };
+    let active = true;
+    getSession().then(value => { if (active) setSession(value); })
+      .catch(() => { if (active) setSessionError('Não foi possível verificar sua conta. Use Entrar para tentar novamente.'); })
+      .finally(() => { if (active) setSessionLoading(false); });
+    return () => { active = false; };
   }, []);
-
-  const statusInfo = useMemo(() => {
-    if (apiStatus === "online") {
-      return {
-        titulo: "Sistema conectado",
-        descricao: "Spring Boot · MariaDB",
-        classe: "online",
-      };
-    }
-
-    if (apiStatus === "demo") {
-      return {
-        titulo: "Modo demonstração",
-        descricao: "API indisponível",
-        classe: "demo",
-      };
-    }
-
-    return {
-      titulo: "Verificando sistema",
-      descricao: "Conectando à API",
-      classe: "checking",
-    };
-  }, [apiStatus]);
-
-  return (
-    <div className="techhelp-site">
-      <header className="site-header">
-        <div className="container header-inner">
-          <a href="/" className="brand">
-            <span className="brand-symbol">
-              <Terminal size={17} strokeWidth={2.2} />
-            </span>
-
-            <span className="brand-word">
-              Tech<span>Help</span>
-            </span>
-          </a>
-
-          <nav className="desktop-nav">
-            <a href="#servicos">Serviços</a>
-            <a href="#fluxo">Como funciona</a>
-            <a href="#profissionais">Profissionais</a>
-            <a href="#ferramentas">Ferramentas</a>
-          </nav>
-
-          <div className="header-actions">
-            <button className="text-button" type="button">
-              Entrar
-            </button>
-
-            <button className="solid-button compact" type="button">
-              Publicar solicitação
-              <ArrowRight size={15} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main>
-        <section className="hero">
-          <div className="hero-pattern" />
-
-          <div className="container hero-layout">
-            <div className="hero-main">
-              <div className="hero-kicker">
-                <span className="kicker-line" />
-                Plataforma especializada em serviços de TI
-              </div>
-
-              <h1>
-                Tecnologia resolvida
-                <span> por quem entende.</span>
-              </h1>
-
-              <p className="hero-lead">
-                Publique uma necessidade, compare profissionais
-                especializados e acompanhe cada etapa do serviço
-                em um único ambiente.
-              </p>
-
-              <div className="problem-search">
-                <div className="problem-input">
-                  <Search size={20} />
-
-                  <div>
-                    <small>O que precisa ser resolvido?</small>
-                    <span>
-                      Ex.: meu computador liga, mas não apresenta imagem
-                    </span>
-                  </div>
-                </div>
-
-                <button type="button">
-                  Encontrar profissional
-                  <ArrowRight size={17} />
-                </button>
-              </div>
-
-              <div className="search-suggestions">
-                <span>Buscas frequentes</span>
-                <button type="button">Wi-Fi</button>
-                <button type="button">Notebook</button>
-                <button type="button">Formatação</button>
-                <button type="button">Rede empresarial</button>
-              </div>
-
-              <div className="system-status-row">
-                <div className={`system-indicator ${statusInfo.classe}`}>
-                  <span className="indicator-dot" />
-
-                  <div>
-                    <strong>{statusInfo.titulo}</strong>
-                    <span>{statusInfo.descricao}</span>
-                  </div>
-                </div>
-
-                <div className="hero-proof">
-                  <BadgeCheck size={16} />
-                  Profissionais especializados
-                </div>
-
-                <div className="hero-proof">
-                  <ShieldCheck size={16} />
-                  Fluxo transparente
-                </div>
-              </div>
-            </div>
-
-            <div className="operations-console">
-              <div className="console-topbar">
-                <div className="console-title">
-                  <Activity size={14} />
-                  Central de atendimento
-                </div>
-
-                <span className="demo-label">
-                  CENÁRIO DEMONSTRATIVO
-                </span>
-              </div>
-
-              <div className="console-request">
-                <div className="request-code-row">
-                  <span>SOLICITAÇÃO</span>
-                  <strong>#084</strong>
-                </div>
-
-                <div className="request-title-row">
-                  <div className="request-main-icon">
-                    <Laptop size={22} />
-                  </div>
-
-                  <div>
-                    <span className="mono-label">HARDWARE</span>
-                    <h2>Notebook não inicia</h2>
-                  </div>
-
-                  <span className="status-badge open">
-                    ABERTA
-                  </span>
-                </div>
-
-                <p>
-                  O equipamento liga, mas não apresenta imagem.
-                  Necessário diagnóstico e possível manutenção.
-                </p>
-
-                <div className="request-properties">
-                  <div>
-                    <MapPin size={14} />
-                    <span>
-                      <small>ATENDIMENTO</small>
-                      Presencial
-                    </span>
-                  </div>
-
-                  <div>
-                    <Clock3 size={14} />
-                    <span>
-                      <small>URGÊNCIA</small>
-                      Normal
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="proposal-section">
-                <div className="console-section-heading">
-                  <div>
-                    <span>PROPOSTAS</span>
-                    <strong>04 recebidas</strong>
-                  </div>
-
-                  <button type="button">
-                    Comparar
-                    <SlidersHorizontal size={14} />
-                  </button>
-                </div>
-
-                <div className="professional-row featured">
-                  <div className="tech-avatar dark">
-                    RC
-                  </div>
-
-                  <div className="tech-info">
-                    <div>
-                      <strong>Rafael Costa</strong>
-                      <BadgeCheck size={14} />
-                    </div>
-
-                    <span>Suporte e manutenção</span>
-                  </div>
-
-                  <div className="tech-rating">
-                    <Star size={13} fill="currentColor" />
-                    4,9
-                  </div>
-
-                  <div className="proposal-value">
-                    <small>PROPOSTA</small>
-                    <strong>R$ 180</strong>
-                  </div>
-                </div>
-
-                <div className="professional-row">
-                  <div className="tech-avatar accent">
-                    LM
-                  </div>
-
-                  <div className="tech-info">
-                    <div>
-                      <strong>Lucas Martins</strong>
-                      <BadgeCheck size={14} />
-                    </div>
-
-                    <span>Hardware e infraestrutura</span>
-                  </div>
-
-                  <div className="tech-rating">
-                    <Star size={13} fill="currentColor" />
-                    4,8
-                  </div>
-
-                  <div className="proposal-value">
-                    <small>PROPOSTA</small>
-                    <strong>R$ 210</strong>
-                  </div>
-                </div>
-              </div>
-
-              <div className="console-footer">
-                <div>
-                  <MessageSquareText size={15} />
-                  Conversa disponível após contato
-                </div>
-
-                <button type="button">
-                  Ver solicitação
-                  <ChevronRight size={15} />
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section className="system-band">
-          <div className="container system-band-inner">
-            <span>TECHHELP / SERVICE NETWORK</span>
-
-            <div>
-              <strong>Hardware</strong>
-              <i />
-              <strong>Software</strong>
-              <i />
-              <strong>Redes</strong>
-              <i />
-              <strong>Segurança</strong>
-              <i />
-              <strong>Infraestrutura</strong>
-            </div>
-
-            <span>BR / 2026</span>
-          </div>
-        </section>
-
-        <section
-          className="categories-section section"
-          id="servicos"
-        >
-          <div className="container">
-            <div className="section-heading split-heading">
-              <div>
-                <span className="eyebrow">
-                  SERVIÇOS ESPECIALIZADOS
-                </span>
-
-                <h2>
-                  Um ponto de acesso para
-                  <br />
-                  diferentes áreas de TI.
-                </h2>
-              </div>
-
-              <div className="section-side-copy">
-                <p>
-                  As categorias abaixo são carregadas pela API do
-                  TechHelp quando o backend está disponível.
-                </p>
-
-                <div className="database-reference">
-                  <Database size={15} />
-                  <span>
-                    {String(categorias.length).padStart(2, "0")} categorias
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <div className="category-table">
-              {categorias.map((categoria, index) => {
-                const Icon =
-                  getCategoriaIcon(categoria.nome);
-
-                return (
-                  <article
-                    className="category-row"
-                    key={categoria.idCategoria}
-                  >
-                    <span className="row-number">
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
-
-                    <div className="category-icon">
-                      <Icon size={21} />
-                    </div>
-
-                    <h3>{categoria.nome}</h3>
-
-                    <p>
-                      {categoria.descricao ||
-                        "Serviços especializados disponíveis na plataforma."}
-                    </p>
-
-                    <button type="button">
-                      Explorar
-                      <ArrowRight size={15} />
-                    </button>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="workflow-section"
-          id="fluxo"
-        >
-          <div className="container">
-            <div className="workflow-top">
-              <div>
-                <span className="eyebrow light">
-                  FLUXO OPERACIONAL
-                </span>
-
-                <h2>
-                  Do chamado à conclusão,
-                  <br />
-                  sem perder o contexto.
-                </h2>
-              </div>
-
-              <p>
-                O fluxo do TechHelp acompanha a mesma lógica
-                implementada no backend: solicitação, proposta,
-                contratação, execução e avaliação.
-              </p>
-            </div>
-
-            <div className="workflow-grid">
-              <article>
-                <span className="workflow-index">01</span>
-                <Search size={22} />
-
-                <div>
-                  <h3>Solicitação</h3>
-                  <p>
-                    O cliente descreve o problema e define os
-                    detalhes do atendimento.
-                  </p>
-                </div>
-
-                <span className="workflow-state">
-                  ABERTA
-                </span>
-              </article>
-
-              <article>
-                <span className="workflow-index">02</span>
-                <UserRoundCheck size={22} />
-
-                <div>
-                  <h3>Propostas</h3>
-                  <p>
-                    Técnicos especializados analisam a demanda
-                    e enviam condições.
-                  </p>
-                </div>
-
-                <span className="workflow-state">
-                  EM NEGOCIAÇÃO
-                </span>
-              </article>
-
-              <article>
-                <span className="workflow-index">03</span>
-                <CircleCheck size={22} />
-
-                <div>
-                  <h3>Contratação</h3>
-                  <p>
-                    Uma proposta é escolhida e passa a existir
-                    um serviço vinculado.
-                  </p>
-                </div>
-
-                <span className="workflow-state">
-                  AGENDADO
-                </span>
-              </article>
-
-              <article>
-                <span className="workflow-index">04</span>
-                <Activity size={22} />
-
-                <div>
-                  <h3>Atendimento</h3>
-                  <p>
-                    Cliente e técnico acompanham o andamento
-                    até a conclusão.
-                  </p>
-                </div>
-
-                <span className="workflow-state">
-                  EM ANDAMENTO
-                </span>
-              </article>
-
-              <article>
-                <span className="workflow-index">05</span>
-                <Star size={22} />
-
-                <div>
-                  <h3>Avaliação</h3>
-                  <p>
-                    O histórico termina com a avaliação do
-                    serviço realizado.
-                  </p>
-                </div>
-
-                <span className="workflow-state">
-                  CONCLUÍDO
-                </span>
-              </article>
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="professionals-section section"
-          id="profissionais"
-        >
-          <div className="container professional-layout">
-            <div className="professional-copy">
-              <span className="eyebrow">
-                REDE DE PROFISSIONAIS
-              </span>
-
-              <h2>
-                Mais contexto.
-                <br />
-                Menos tentativa e erro.
-              </h2>
-
-              <p>
-                Perfis profissionais podem reunir especialidades,
-                certificações, portfólio, avaliações e histórico
-                dentro da própria plataforma.
-              </p>
-
-              <ul>
-                <li>
-                  <Check size={16} />
-                  Especialidades técnicas
-                </li>
-
-                <li>
-                  <Check size={16} />
-                  Certificações profissionais
-                </li>
-
-                <li>
-                  <Check size={16} />
-                  Portfólio de trabalhos
-                </li>
-
-                <li>
-                  <Check size={16} />
-                  Avaliações de atendimentos
-                </li>
-              </ul>
-
-              <button className="outline-button" type="button">
-                Encontrar profissionais
-                <ArrowRight size={16} />
-              </button>
-            </div>
-
-            <div className="profile-interface">
-              <div className="profile-interface-header">
-                <span>PERFIL PROFISSIONAL</span>
-                <span>#TEC-024</span>
-              </div>
-
-              <div className="profile-main">
-                <div className="large-avatar">
-                  GM
-                </div>
-
-                <div className="profile-heading">
-                  <div>
-                    <h3>Gabriel Mendes</h3>
-                    <BadgeCheck size={17} />
-                  </div>
-
-                  <span>
-                    Infraestrutura · Redes · Hardware
-                  </span>
-                </div>
-
-                <div className="profile-score">
-                  <Star size={15} fill="currentColor" />
-                  <strong>4,9</strong>
-                  <small>38 avaliações</small>
-                </div>
-              </div>
-
-              <div className="profile-metrics">
-                <div>
-                  <small>SERVIÇOS</small>
-                  <strong>52</strong>
-                </div>
-
-                <div>
-                  <small>CONCLUÍDOS</small>
-                  <strong>49</strong>
-                </div>
-
-                <div>
-                  <small>ESPECIALIDADES</small>
-                  <strong>05</strong>
-                </div>
-
-                <div>
-                  <small>CERTIFICAÇÕES</small>
-                  <strong>03</strong>
-                </div>
-              </div>
-
-              <div className="profile-skills">
-                <span>Redes TCP/IP</span>
-                <span>Switches</span>
-                <span>Wi-Fi</span>
-                <span>Hardware</span>
-                <span>Windows</span>
-              </div>
-
-              <div className="profile-actions">
-                <button type="button">
-                  Ver perfil completo
-                </button>
-
-                <button type="button">
-                  <MessageSquareText size={15} />
-                  Conversar
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section
-          className="tools-section"
-          id="ferramentas"
-        >
-          <div className="container tools-layout">
-            <div className="tool-interface">
-              <div className="tool-interface-top">
-                <div>
-                  <span className="mono-label">
-                    CATÁLOGO TÉCNICO
-                  </span>
-
-                  <strong>KIT-0042</strong>
-                </div>
-
-                <span className="availability">
-                  <span />
-                  DISPONÍVEL
-                </span>
-              </div>
-
-              <div className="tool-product">
-                <div className="tool-visual">
-                  <Wrench size={38} />
-                  <Cable size={26} />
-                  <Router size={34} />
-                </div>
-
-                <div>
-                  <span className="mono-label">
-                    MANUTENÇÃO / REDES
-                  </span>
-
-                  <h3>Kit técnico essencial</h3>
-
-                  <p>
-                    Conjunto para diagnóstico, manutenção e
-                    pequenos atendimentos de infraestrutura.
-                  </p>
-                </div>
-              </div>
-
-              <div className="tool-specs">
-                <div>
-                  <small>DISPONIBILIDADE</small>
-                  <strong>05 unidades</strong>
-                </div>
-
-                <div>
-                  <small>VALOR / DIA</small>
-                  <strong>R$ 50,00</strong>
-                </div>
-
-                <div>
-                  <small>RETIRADA</small>
-                  <strong>Presencial</strong>
-                </div>
-              </div>
-
-              <div className="tool-items">
-                <div>
-                  <span>01</span>
-                  Chaves de precisão
-                </div>
-
-                <div>
-                  <span>02</span>
-                  Cabos e adaptadores
-                </div>
-
-                <div>
-                  <span>03</span>
-                  Testadores e diagnóstico
-                </div>
-              </div>
-
-              <button className="tool-action" type="button">
-                Ver detalhes do kit
-                <ArrowRight size={16} />
-              </button>
-            </div>
-
-            <div className="tools-copy">
-              <div className="tools-symbol">
-                <PackageOpen size={24} />
-              </div>
-
-              <span className="eyebrow">
-                DIFERENCIAL TECHHELP
-              </span>
-
-              <h2>
-                Ferramentas também
-                <br />
-                fazem parte do serviço.
-              </h2>
-
-              <p>
-                Profissionais podem utilizar o módulo de aluguel
-                para localizar kits e ferramentas adequados ao
-                atendimento que precisam realizar.
-              </p>
-
-              <div className="tools-benefits">
-                <div>
-                  <strong>01</strong>
-                  <span>
-                    Consulta de disponibilidade
-                  </span>
-                </div>
-
-                <div>
-                  <strong>02</strong>
-                  <span>
-                    Controle de retirada e devolução
-                  </span>
-                </div>
-
-                <div>
-                  <strong>03</strong>
-                  <span>
-                    Valor calculado por período
-                  </span>
-                </div>
-              </div>
-
-              <button className="outline-button" type="button">
-                Explorar ferramentas
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
-        </section>
-
-        <section className="closing-section">
-          <div className="container closing-panel">
-            <div className="closing-main">
-              <span className="eyebrow light">
-                TECHHELP / READY
-              </span>
-
-              <h2>
-                O problema é técnico.
-                <br />
-                A solução também deve ser.
-              </h2>
-
-              <p>
-                Encontre profissionais especializados ou
-                transforme sua experiência em novas oportunidades.
-              </p>
-            </div>
-
-            <div className="closing-actions">
-              <button className="light-button" type="button">
-                Preciso de um técnico
-                <ArrowRight size={16} />
-              </button>
-
-              <button className="transparent-button" type="button">
-                Sou profissional de TI
-                <ArrowRight size={16} />
-              </button>
-            </div>
-          </div>
-        </section>
-      </main>
-
-      <footer className="site-footer">
-        <div className="container footer-inner">
-          <a href="/" className="brand">
-            <span className="brand-symbol footer-symbol">
-              <Terminal size={16} />
-            </span>
-
-            <span className="brand-word">
-              Tech<span>Help</span>
-            </span>
-          </a>
-
-          <p>
-            Marketplace especializado em serviços de tecnologia.
-          </p>
-
-          <span className="footer-code">
-            TH / PLATFORM / 2026
-          </span>
-        </div>
-      </footer>
-    </div>
-  );
+  useEffect(() => {
+    const controller = new AbortController();
+    api.get<Categoria[]>('/categorias', { signal: controller.signal }).then(response => {
+      if (!Array.isArray(response.data) || response.data.some(c => !c || !Number.isSafeInteger(c.idCategoria) || c.idCategoria <= 0 || typeof c.nome !== 'string' || typeof c.ativo !== 'boolean')) throw new Error('Catálogo inválido');
+      setCatalog({ status: 'ready', categories: response.data.filter(c => c.ativo) });
+    }).catch(() => { if (!controller.signal.aborted) setCatalog({ status: 'error', categories: [] }); });
+    return () => controller.abort();
+  }, [reload]);
+  useEffect(() => { if (screen !== 'home') main.current?.focus({ preventScroll: true }); }, [screen]);
+
+  function navigate(next: Screen) {
+    if (operation.current && next !== 'published') return;
+    setMenu(false); setScreen(next); window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function notify(title: string, body: string) { setMessage({ title, body }); dialog.current?.showModal(); }
+  function updateDraft(next: Draft) {
+    setDraft(next);
+    try { sessionStorage.setItem(draftKey, JSON.stringify(next)); setSaved(true); }
+    catch { setSaved(false); }
+  }
+  function retry() { setCatalog({ status: 'loading', categories: [] }); setReload(value => value + 1); }
+  function choose(category: Categoria) {
+    const area = areaFor(category.nome);
+    if (!area) { notify(category.nome, 'As perguntas desta área ainda estão em preparação. Por enquanto, o assistente está disponível para Hardware, Redes e Software.'); return; }
+    updateDraft({ ...draft, categoryId: category.idCategoria, area, mode: draft.area === area ? draft.mode : '' });
+    navigate('request');
+  }
+  function resume() {
+    const category = catalog.categories.find(c => c.idCategoria === draft.categoryId && areaFor(c.nome) === draft.area);
+    if (catalog.status !== 'ready' || !category) { navigate('categories'); notify('Confira a categoria do pedido', 'Precisamos de uma categoria disponível para continuar. Suas respostas anteriores permanecem guardadas.'); return; }
+    navigate('request');
+  }
+  function sectionLink(id: string) {
+    if (operation.current) return;
+    setMenu(false); setScreen('home');
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  }
+  async function logout() {
+    if (operation.current) return;
+    operation.current = true; setBusy(true);
+    try { await postProtected('/auth/logout'); setSession(null); setScreen('home'); setMenu(false); }
+    catch (error) { notify('Não foi possível sair', errorMessage(error)); }
+    finally { operation.current = false; setBusy(false); }
+  }
+  async function publish() {
+    if (operation.current || uncertain) return;
+    setPublishError('');
+    if (!session) { setAuthOpen(true); return; }
+    operation.current = true; setBusy(true);
+    let sent = false;
+    try {
+      const current = await getSession(); setSession(current);
+      if (!current) { setAuthOpen(true); return; }
+      if (!current.idCliente || !current.perfis.includes('CLIENTE')) { setPublishError('A publicação exige uma conta de cliente. Saia e entre com uma conta de cliente; seu rascunho será preservado.'); return; }
+      const payload = requestPayload(draft, current.idCliente);
+      if (!catalog.categories.some(c => c.idCategoria === draft.categoryId && areaFor(c.nome) === draft.area)) { setPublishError('Escolha uma categoria disponível antes de publicar.'); return; }
+      sent = true;
+      const { data } = await postProtected<ServiceRequest>('/solicitacoes', payload);
+      setPublished(data); setDraft(emptyDraft()); setSaved(false);
+      try { sessionStorage.removeItem(draftKey); } catch { /* O pedido já foi confirmado. */ }
+      navigate('published');
+    } catch (error) {
+      if (statusOf(error) === 401) { setSession(null); setAuthOpen(true); }
+      const unknown = sent && (statusOf(error) === undefined || (statusOf(error) ?? 0) >= 500);
+      setUncertain(unknown);
+      setPublishError(unknown ? 'Não recebemos a confirmação. Confira Meus pedidos antes de enviar novamente; seu rascunho foi mantido.' : errorMessage(error));
+    } finally { operation.current = false; setBusy(false); }
+  }
+  function accountControls() {
+    if (sessionLoading) return <span role="status">Verificando conta…</span>;
+    if (!session) return <button className="th-button secondary" onClick={() => { setAuthProfessional(false); setAuthOpen(true); }}>Entrar</button>;
+    return <><span className="th-account-name" title={session.nome}>Olá, {session.nome}</span>{session.idCliente && session.perfis.includes('CLIENTE') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('requests')}>Meus pedidos</button>}{session.idTecnico && session.perfis.includes('TECNICO') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('technician')}>Área do técnico</button>}<button disabled={busy} className="th-button secondary" onClick={logout}>Sair</button></>;
+  }
+  function navLinks() { return navigation.map(([id, label]) => <button key={id} className={`th-nav-link${id === 'ferramentas' ? ' th-nav-rental' : ''}`} onClick={() => sectionLink(id)}>{id === 'ferramentas' && <Wrench size={15} />}{label}</button>); }
+  function catalogOptions() {
+    if (catalog.status === 'loading') return <p role="status">Carregando áreas de atendimento…</p>;
+    if (catalog.status === 'error') return <div role="alert"><p>Não conseguimos carregar as áreas de atendimento.</p><button className="th-button secondary" onClick={retry}>Tentar novamente</button></div>;
+    if (!catalog.categories.length) return <p role="status">Nenhuma área de atendimento está disponível neste momento.</p>;
+    return <div className="th-options">{catalog.categories.filter(c => areaFor(c.nome)).map(c => <button className="th-option" key={c.idCategoria} onClick={() => choose(c)}><span>{c.nome}<small>{c.descricao}</small></span><ArrowRight size={18} /></button>)}<button className="th-option" onClick={() => navigate('unsure')}><CircleHelp size={22} />Não sei por onde começar</button></div>;
+  }
+
+  return <div className={`techhelp-site${paused ? ' th-paused th-motion-paused' : ''}`}>
+    <a className="th-skip" href="#conteudo">Ir para o conteúdo</a>
+    <header className="th-header"><div className="th-inner th-header-inner"><button className="th-brand" onClick={() => navigate('home')} aria-label="TechHelp início"><svg className="th-mark" viewBox="0 0 26 26" aria-hidden="true"><rect className="th-mark-body" x="1" y="1" width="24" height="24" rx="7" strokeWidth="1.5" /><path className="th-mark-line" d="M6.5 18 12 12.5 15.5 16" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /><circle className="th-mark-signal" cx="18.5" cy="8.5" r="3" /></svg>TechHelp</button>
+      <nav className="th-nav" aria-label="Navegação principal">{navLinks()}{accountControls()}</nav><button className="th-button secondary th-menu-toggle" aria-expanded={menu} aria-controls="menu-mobile" onClick={() => setMenu(!menu)}>{menu ? <X size={18} /> : <Menu size={18} />}{menu ? 'Fechar' : 'Menu'}</button>
+    </div></header>
+    <nav id="menu-mobile" className="th-mobile-nav" aria-label="Menu mobile" hidden={!menu}><div className="th-inner">{navLinks()}{accountControls()}</div></nav>
+    <main id="conteudo" className={screen === 'home' ? undefined : 'th-app-content'} ref={main} tabIndex={-1}>
+      {sessionError && <p role="status" className="th-note">{sessionError}</p>}
+      {screen === 'request' && <RequestAssistant draft={draft} onChange={updateDraft} saved={saved} busy={busy || sessionLoading} blocked={uncertain} publishError={publishError} onCheckRequests={() => navigate('requests')} onHome={() => navigate('home')} onCategory={() => navigate('categories')} onPublish={publish} />}
+      {screen === 'technician' && session?.idTecnico && <TechnicianBoard key={session.idTecnico} idTecnico={session.idTecnico} onBack={() => navigate('home')} />}
+      {screen === 'requests' && session?.idCliente && <MyRequests key={session.idCliente} idCliente={session.idCliente} uncertain={uncertain} onBack={() => { setUncertain(false); setPublishError(''); navigate(draft.area ? 'request' : 'home'); }} />}
+      {screen === 'published' && published && <section className="th-wizard th-flow-content" role="status"><h1 className="th-form-title">Solicitação publicada!</h1><p>Pedido #{published.idSolicitacao}: {published.titulo}</p><p>Seu pedido foi recebido. Consulte Meus pedidos para comparar as propostas quando chegarem.</p><div className="th-actions"><button className="th-button" onClick={() => navigate('requests')}>Ver meus pedidos</button><button className="th-button secondary" onClick={() => navigate('categories')}>Criar outro pedido</button></div></section>}
+      {(screen === 'categories' || screen === 'unsure') && <section className="th-wizard"><button className="th-link" onClick={() => navigate('home')}>← Voltar à Home</button><div className="th-flow-content"><h1 className="th-form-title">{screen === 'unsure' ? 'Conte o que está acontecendo.' : 'Qual área parece mais próxima?'}</h1><p className="th-sub">Não precisa descobrir a causa. As jornadas disponíveis são Hardware, Redes e Software.</p>{screen === 'unsure' && <label className="th-label">Sua descrição<textarea className="th-field" maxLength={3000} value={draft.details} onChange={e => updateDraft({ ...draft, details: e.target.value })} placeholder="Ex.: meu notebook liga, mas a tela fica preta" /></label>}{catalogOptions()}</div></section>}
+      {screen === 'home' && <Landing catalog={catalog} paused={paused} hasDraft={Boolean(draft.area || draft.details.trim())} onChoose={choose} onRetry={retry} onUnsure={() => navigate('unsure')} onStart={() => navigate('categories')} onResume={resume} onRental={() => notify('Aluguel de ferramentas', 'As ferramentas serão do próprio TechHelp. O catálogo, as reservas e a entrega ainda estão em preparação.')} onProfessional={() => { if (session?.idTecnico && session.perfis.includes('TECNICO')) navigate('technician'); else { setAuthProfessional(true); setAuthOpen(true); } }} />}
+    </main>
+    <footer className="th-footer"><div className="th-inner th-footer-inner"><div className="th-footer-brand"><strong>TechHelp</strong><span>Serviços de TI e aluguel de ferramentas técnicas.</span><span>Projeto Integrador de Software, SENAC Taboão da Serra.</span></div><div className="th-footer-links"><button onClick={() => sectionLink('como-funciona')}>Como funciona</button><button onClick={() => sectionLink('ferramentas')}>Aluguel de ferramentas</button><button onClick={() => sectionLink('profissionais')}>Sou profissional</button><button aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? <Play size={14} /> : <Pause size={14} />}{paused ? 'Retomar movimento' : 'Pausar movimento'}</button></div></div></footer>
+    <dialog className="th-dialog" ref={dialog} aria-labelledby="dialog-title" onClick={e => { if (e.target === e.currentTarget) dialog.current?.close(); }}><h2 id="dialog-title">{message.title}</h2><p>{message.body}</p><button className="th-button" onClick={() => dialog.current?.close()}>Entendi</button></dialog>
+    {authOpen && <AuthDialog initialProfessional={authProfessional} onClose={() => { setAuthOpen(false); setAuthProfessional(false); }} onAuthenticated={value => { setAuthProfessional(false); setSession(value); setSessionError(''); setAuthOpen(false); setMenu(false); setPublishError(''); }} />}
+  </div>;
 }
-
-export default Home;

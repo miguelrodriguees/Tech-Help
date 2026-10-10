@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarPortfolioRequest;
 import br.com.techhelp.model.Portfolio;
 import br.com.techhelp.repository.PortfolioRepository;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class PortfolioService {
 
     private final PortfolioRepository portfolioRepository;
@@ -23,6 +26,7 @@ public class PortfolioService {
         this.tecnicoRepository = tecnicoRepository;
     }
 
+    @PreAuthorize("@acesso.tecnico(#request.idTecnico())")
     public Portfolio criar(CriarPortfolioRequest request) {
 
         if (!tecnicoRepository.existsById(request.idTecnico())) {
@@ -42,6 +46,7 @@ public class PortfolioService {
         return portfolioRepository.save(portfolio);
     }
 
+    @PreAuthorize("permitAll()")
     public List<Portfolio> listarPorTecnico(Long idTecnico) {
 
         if (!tecnicoRepository.existsById(idTecnico)) {
@@ -54,6 +59,7 @@ public class PortfolioService {
                 .findByIdTecnicoOrderByDataCadastroDesc(idTecnico);
     }
 
+    @PreAuthorize("@acesso.portfolio(#idPortfolio)")
     public void excluir(Long idPortfolio) {
 
         Portfolio portfolio = portfolioRepository
