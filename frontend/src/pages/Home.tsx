@@ -1,23 +1,18 @@
-import { useEffect, useRef, useState, type ElementType } from 'react';
-import { AppWindow, ArrowRight, ArrowUpRight, BadgeCheck, BookmarkCheck, BriefcaseBusiness, Cable, Check, CircleHelp, Cpu, Handshake, Images, Laptop, ListChecks, ListFilter, Menu, MessageSquare, MessageSquareText, Microchip, MousePointer2, Network, Pause, Play, Printer, Route, Server, Shield, Wrench, X } from 'lucide-react';
-import { api } from '../services/api';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowRight, CircleHelp, Menu, Pause, Play, Wrench, X } from 'lucide-react';
+import { api, errorMessage, getSession, postProtected, statusOf, type Session, type ServiceRequest } from '../services/api';
+import AuthDialog from '../features/auth/AuthDialog';
+import MyRequests from '../features/solicitacao/MyRequests';
+import TechnicianBoard from '../features/propostas/TechnicianBoard';
+import { requestPayload } from '../features/solicitacao/publication';
 import type { Categoria } from '../types/Categoria';
 import RequestAssistant from '../features/solicitacao/RequestAssistant';
 import { areaFor, draftKey, emptyDraft, parseDraft, type Draft } from '../features/solicitacao/flow';
+import Landing from '../features/home/Landing';
 
 type Catalog = { status: 'loading' | 'ready' | 'error'; categories: Categoria[] };
-type Screen = 'home' | 'categories' | 'unsure' | 'request';
-
-function categoryIcon(name: string): ElementType {
-  const value = name.toLowerCase();
-  if (value.includes('hardware')) return Laptop;
-  if (value.includes('rede')) return Network;
-  if (value.includes('software')) return AppWindow;
-  if (value.includes('segur')) return Shield;
-  if (value.includes('impress') || value.includes('perif')) return Printer;
-  return Server;
-}
-
+type Screen = 'home' | 'categories' | 'unsure' | 'request' | 'requests' | 'published' | 'technician';
+const navigation = [['servicos', 'Serviços'], ['como-funciona', 'Como funciona'], ['ferramentas', 'Aluguel de ferramentas'], ['profissionais', 'Sou profissional']];
 function loadDraft(): Draft {
   try { return parseDraft(sessionStorage.getItem(draftKey)); }
   catch { return emptyDraft(); }
@@ -34,7 +29,24 @@ export default function Home() {
   const [message, setMessage] = useState({ title: '', body: '' });
   const dialog = useRef<HTMLDialogElement>(null);
   const main = useRef<HTMLElement>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [sessionLoading, setSessionLoading] = useState(true);
+  const [sessionError, setSessionError] = useState('');
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authProfessional, setAuthProfessional] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [publishError, setPublishError] = useState('');
+  const [uncertain, setUncertain] = useState(false);
+  const [published, setPublished] = useState<ServiceRequest | null>(null);
+  const operation = useRef(false);
 
+  useEffect(() => {
+    let active = true;
+    getSession().then(value => { if (active) setSession(value); })
+      .catch(() => { if (active) setSessionError('Não foi possível verificar sua conta. Use Entrar para tentar novamente.'); })
+      .finally(() => { if (active) setSessionLoading(false); });
+    return () => { active = false; };
+  }, []);
   useEffect(() => {
     const controller = new AbortController();
     api.get<Categoria[]>('/categorias', { signal: controller.signal }).then(response => {
@@ -43,123 +55,96 @@ export default function Home() {
     }).catch(() => { if (!controller.signal.aborted) setCatalog({ status: 'error', categories: [] }); });
     return () => controller.abort();
   }, [reload]);
+  useEffect(() => { if (screen !== 'home') main.current?.focus({ preventScroll: true }); }, [screen]);
 
-  useEffect(() => {
-    if (screen !== 'home') main.current?.focus({ preventScroll: true });
-    if (!('IntersectionObserver' in window) || paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-    const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        entry.target.animate?.([{ opacity: 0.3, transform: 'translateY(18px)' }, { opacity: 1, transform: 'translateY(0)' }], { duration: 500, easing: 'cubic-bezier(.22,1,.36,1)' });
-        observer.unobserve(entry.target);
-      }
-    }, { threshold: 0.08 });
-    main.current?.querySelectorAll('.th-section').forEach(section => observer.observe(section));
-    return () => observer.disconnect();
-  }, [screen, paused]);
-
+  function navigate(next: Screen) {
+    if (operation.current && next !== 'published') return;
+    setMenu(false); setScreen(next); window.scrollTo({ top: 0, behavior: 'instant' });
+  }
+  function notify(title: string, body: string) { setMessage({ title, body }); dialog.current?.showModal(); }
   function updateDraft(next: Draft) {
     setDraft(next);
     try { sessionStorage.setItem(draftKey, JSON.stringify(next)); setSaved(true); }
     catch { setSaved(false); }
   }
-
-  function navigate(next: Screen) {
-    setMenu(false);
-    setScreen(next);
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }
-
-  function notify(title: string, body: string) {
-    setMessage({ title, body });
-    dialog.current?.showModal();
-  }
-
+  function retry() { setCatalog({ status: 'loading', categories: [] }); setReload(value => value + 1); }
   function choose(category: Categoria) {
     const area = areaFor(category.nome);
     if (!area) { notify(category.nome, 'As perguntas desta área ainda estão em preparação. Por enquanto, o assistente está disponível para Hardware, Redes e Software.'); return; }
     updateDraft({ ...draft, categoryId: category.idCategoria, area, mode: draft.area === area ? draft.mode : '' });
     navigate('request');
   }
-
-  function sectionLink(id: string) {
-    setMenu(false);
-    setScreen('home');
-    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
-  }
-
   function resume() {
     const category = catalog.categories.find(c => c.idCategoria === draft.categoryId && areaFor(c.nome) === draft.area);
     if (catalog.status !== 'ready' || !category) { navigate('categories'); notify('Confira a categoria do pedido', 'Precisamos de uma categoria disponível para continuar. Suas respostas anteriores permanecem guardadas.'); return; }
     navigate('request');
   }
-
-  function catalogOptions(all = false) {
-    if (catalog.status === 'loading') return <div role="status" aria-busy="true"><p className="th-sub">Carregando áreas de atendimento…</p><div className="th-skeleton" /><div className="th-skeleton" /></div>;
-    if (catalog.status === 'error') return <div role="alert"><p className="th-sub">Não conseguimos carregar as áreas de atendimento. Tente novamente.</p><button className="th-button secondary" onClick={() => { setCatalog({ status: 'loading', categories: [] }); setReload(value => value + 1); }}>Tentar novamente</button></div>;
-    if (!catalog.categories.length) return <p className="th-note" role="status">Nenhuma área de atendimento está disponível neste momento. Tente novamente mais tarde.</p>;
-    const categories = all ? catalog.categories : catalog.categories.filter(c => areaFor(c.nome));
-    return <div className={all ? 'th-services' : 'th-options'}>
-      {categories.map(category => { const Icon = categoryIcon(category.nome); return <button type="button" className={all ? 'th-service' : 'th-option'} key={category.idCategoria} onClick={() => choose(category)}><Icon size={23} /><span>{category.nome}<small>{category.descricao}</small></span>{all && <ArrowUpRight size={18} />}</button>; })}
-      {!all && <button type="button" className="th-option" onClick={() => navigate('unsure')}><CircleHelp size={23} /><span>Não sei por onde começar<small>Descreva com suas palavras</small></span></button>}
-    </div>;
+  function sectionLink(id: string) {
+    if (operation.current) return;
+    setMenu(false); setScreen('home');
+    requestAnimationFrame(() => document.getElementById(id)?.scrollIntoView({ behavior: paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }));
+  }
+  async function logout() {
+    if (operation.current) return;
+    operation.current = true; setBusy(true);
+    try { await postProtected('/auth/logout'); setSession(null); setScreen('home'); setMenu(false); }
+    catch (error) { notify('Não foi possível sair', errorMessage(error)); }
+    finally { operation.current = false; setBusy(false); }
+  }
+  async function publish() {
+    if (operation.current || uncertain) return;
+    setPublishError('');
+    if (!session) { setAuthOpen(true); return; }
+    operation.current = true; setBusy(true);
+    let sent = false;
+    try {
+      const current = await getSession(); setSession(current);
+      if (!current) { setAuthOpen(true); return; }
+      if (!current.idCliente || !current.perfis.includes('CLIENTE')) { setPublishError('A publicação exige uma conta de cliente. Saia e entre com uma conta de cliente; seu rascunho será preservado.'); return; }
+      const payload = requestPayload(draft, current.idCliente);
+      if (!catalog.categories.some(c => c.idCategoria === draft.categoryId && areaFor(c.nome) === draft.area)) { setPublishError('Escolha uma categoria disponível antes de publicar.'); return; }
+      sent = true;
+      const { data } = await postProtected<ServiceRequest>('/solicitacoes', payload);
+      setPublished(data); setDraft(emptyDraft()); setSaved(false);
+      try { sessionStorage.removeItem(draftKey); } catch { /* O pedido já foi confirmado. */ }
+      navigate('published');
+    } catch (error) {
+      if (statusOf(error) === 401) { setSession(null); setAuthOpen(true); }
+      const unknown = sent && (statusOf(error) === undefined || (statusOf(error) ?? 0) >= 500);
+      setUncertain(unknown);
+      setPublishError(unknown ? 'Não recebemos a confirmação. Confira Meus pedidos antes de enviar novamente; seu rascunho foi mantido.' : errorMessage(error));
+    } finally { operation.current = false; setBusy(false); }
+  }
+  function accountControls() {
+    if (sessionLoading) return <span role="status">Verificando conta…</span>;
+    if (!session) return <button className="th-button secondary" onClick={() => { setAuthProfessional(false); setAuthOpen(true); }}>Entrar</button>;
+    return <><span className="th-account-name" title={session.nome}>Olá, {session.nome}</span>{session.idCliente && session.perfis.includes('CLIENTE') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('requests')}>Meus pedidos</button>}{session.idTecnico && session.perfis.includes('TECNICO') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('technician')}>Área do técnico</button>}<button disabled={busy} className="th-button secondary" onClick={logout}>Sair</button></>;
+  }
+  function navLinks() { return navigation.map(([id, label]) => <button key={id} className={`th-nav-link${id === 'ferramentas' ? ' th-nav-rental' : ''}`} onClick={() => sectionLink(id)}>{id === 'ferramentas' && <Wrench size={15} />}{label}</button>); }
+  function catalogOptions() {
+    if (catalog.status === 'loading') return <p role="status">Carregando áreas de atendimento…</p>;
+    if (catalog.status === 'error') return <div role="alert"><p>Não conseguimos carregar as áreas de atendimento.</p><button className="th-button secondary" onClick={retry}>Tentar novamente</button></div>;
+    if (!catalog.categories.length) return <p role="status">Nenhuma área de atendimento está disponível neste momento.</p>;
+    return <div className="th-options">{catalog.categories.filter(c => areaFor(c.nome)).map(c => <button className="th-option" key={c.idCategoria} onClick={() => choose(c)}><span>{c.nome}<small>{c.descricao}</small></span><ArrowRight size={18} /></button>)}<button className="th-option" onClick={() => navigate('unsure')}><CircleHelp size={22} />Não sei por onde começar</button></div>;
   }
 
-  return <div className={`techhelp-site${paused ? ' th-motion-paused' : ''}`}>
+  return <div className={`techhelp-site${paused ? ' th-paused th-motion-paused' : ''}`}>
     <a className="th-skip" href="#conteudo">Ir para o conteúdo</a>
-    <div className="th-wrap">
-      <header className="th-header">
-        <button className="th-brand" onClick={() => navigate('home')} aria-label="TechHelp início">Tech<span>Help ↗</span></button>
-        <nav className="th-nav" aria-label="Navegação principal">
-          <button onClick={() => sectionLink('servicos')}>Serviços</button><button onClick={() => sectionLink('como-funciona')}>Como funciona</button><button className="th-rental-nav" onClick={() => sectionLink('ferramentas')}><Wrench size={15} />Aluguel de ferramentas</button><button onClick={() => sectionLink('profissionais')}>Sou profissional</button>
-          <button className="th-button secondary" onClick={() => notify('Acesso à conta em preparação', 'O acesso à conta ainda não está disponível. Você pode começar seu pedido e guardar as respostas nesta aba.')}>Entrar</button>
-        </nav>
-        <button className="th-button secondary th-menu" aria-expanded={menu} aria-controls="menu-mobile" onClick={() => setMenu(!menu)}>{menu ? <X size={18} /> : <Menu size={18} />}{menu ? 'Fechar' : 'Menu'}</button>
-      </header>
-      <nav id="menu-mobile" className="th-mobile-nav" aria-label="Menu mobile" hidden={!menu}>
-        <button onClick={() => sectionLink('servicos')}>Serviços</button><button onClick={() => sectionLink('como-funciona')}>Como funciona</button><button className="th-rental-nav" onClick={() => sectionLink('ferramentas')}><Wrench size={15} />Aluguel de ferramentas</button><button onClick={() => sectionLink('profissionais')}>Sou profissional</button>
-        <button onClick={() => notify('Acesso à conta em preparação', 'O acesso à conta ainda não está disponível. Suas respostas permanecem nesta aba.')}>Entrar</button>
-      </nav>
-      <main id="conteudo" ref={main} tabIndex={-1}>
-        {screen === 'request' && <RequestAssistant draft={draft} onChange={updateDraft} saved={saved} onHome={() => navigate('home')} onCategory={() => navigate('categories')} onPublish={() => notify('Seu pedido ainda não foi publicado', 'A publicação será liberada junto com o acesso à conta. Suas respostas continuam no rascunho, sem envio ao servidor. Você pode voltar e revisar tudo.')} />}
-        {(screen === 'categories' || screen === 'unsure') && <section className="th-wizard">
-          <button className="th-link" onClick={() => navigate('home')}>← Voltar à Home</button>
-          <div className="th-flow-content"><h1 className="th-form-title">{screen === 'unsure' ? 'Conte o que está acontecendo.' : 'Qual área parece mais próxima?'}</h1><p className="th-sub">Não precisa descobrir a causa. As jornadas disponíveis são Hardware, Redes e Software.</p>
-            {screen === 'unsure' && <label className="th-label">Sua descrição<textarea className="th-field" maxLength={3000} value={draft.details} onChange={e => updateDraft({ ...draft, details: e.target.value })} placeholder="Ex.: meu notebook liga, mas a tela fica preta" /></label>}
-            {catalogOptions()}
-          </div>
-        </section>}
-        {screen === 'home' && <>
-          <section className="th-hero">
-            <div className="th-hero-copy"><p className="th-eyebrow">TI para a vida real</p><h1>Seu problema de TI.<br /><em>Um começo simples.</em></h1><p className="th-lead">Conte o que está acontecendo. Vamos ajudar você a organizar seu pedido de atendimento.</p><p className="th-footnote">Não precisa saber termos técnicos.<br />Você só entra na conta quando decidir publicar.</p>
-              {draft.area && <button className="th-link" onClick={resume}><BookmarkCheck size={16} />Continuar minha solicitação</button>}
-              <div className="th-device-scene" role="img" aria-label="Ilustração de notebook, hardware, rede e software">
-                <div className="th-laptop-art"><div className="th-display-art"><Cpu /><div className="th-art-lines"><b /><b /><b /></div><span className="th-art-label">Seu universo de TI.</span></div></div>
-                <div className="th-satellite network"><Network /><span>Redes</span></div><div className="th-satellite chip"><Microchip /><span>Hardware</span></div><div className="th-satellite code"><AppWindow /><span>Software</span></div>
-              </div>
-            </div>
-            <div className="th-assistant"><p className="th-eyebrow"><Route size={18} />Comece por aqui</p><h2>Com o que você precisa de ajuda?</h2><p className="th-sub">Escolha a opção mais próxima do seu problema.</p>{catalogOptions()}</div>
-          </section>
-          <div className="th-band"><span><MousePointer2 />Escolhas simples, no seu ritmo.</span><span><ListChecks />Revise antes de publicar.</span><span><Handshake />Você decide com quem combinar.</span></div>
-          <section className="th-section th-service-section" id="servicos" aria-labelledby="services-title"><div className="th-section-head"><div><p className="th-eyebrow">Serviços de TI</p><h2 id="services-title">Cada problema tem<br /><span className="th-title-soft">um ponto de partida.</span></h2></div><p className="th-sub">Do notebook que não liga à rede que precisa melhorar. Escolha uma área para organizar seu pedido.</p></div>{catalogOptions(true)}</section>
-          <section className="th-section th-how" id="como-funciona" aria-labelledby="how-title"><div className="th-section-head"><div><p className="th-eyebrow">Como funciona</p><h2 id="how-title">Um caminho claro.<br /><span className="th-title-soft">Uma etapa por vez.</span></h2></div><p className="th-sub">Descreva sua necessidade primeiro. O atendimento será organizado a partir do que você contar.</p></div><div className="th-steps">
-            <div><span className="th-step-icon"><MessageSquareText /></span><span className="th-step-no">01 / Descreva</span><h3>Conte o que precisa.</h3><p className="th-sub">Perguntas simples ajudam a montar a solicitação.</p></div>
-            <div><span className="th-step-icon"><ListFilter /></span><span className="th-step-no">02 / Compare</span><h3>Conheça as propostas.</h3><p className="th-sub">Quando chegarem, compare valores, condições e perfis.</p></div>
-            <div><span className="th-step-icon"><Handshake /></span><span className="th-step-no">03 / Combine e avalie</span><h3>Acompanhe o atendimento.</h3><p className="th-sub">Combine os detalhes e avalie depois da conclusão.</p></div>
-          </div></section>
-          <section className="th-section th-rental" id="ferramentas" aria-labelledby="rental-title">
-            <div className="th-rental-copy"><p className="th-eyebrow"><Wrench size={16} />Um diferencial TechHelp</p><h2 id="rental-title">Aluguel de<br /><span>ferramentas e kits.</span></h2><p className="th-lead">O equipamento certo também faz parte de um bom atendimento.</p><p className="th-sub">Além dos serviços de TI, o TechHelp prevê a locação de ferramentas para apoiar o trabalho dos profissionais.</p><details><summary>Como vai funcionar o aluguel <ArrowRight size={16} /></summary><p className="th-sub">A proposta é consultar ferramentas e kits, escolher o período e acompanhar a retirada e a devolução. O catálogo de locação ainda não está disponível neste site. Preços e disponibilidade serão apresentados quando o catálogo estiver integrado.</p></details></div>
-            <div className="th-rental-visual"><p className="th-bench-label">Do diagnóstico à manutenção</p><div className="th-tools" aria-hidden="true"><span><BriefcaseBusiness /></span><span><Wrench /></span><span><Cable /></span></div><div className="th-bench-caption"><span>Ferramentas</span><span>Kits de apoio</span></div><ol className="th-rental-path" aria-label="Etapas previstas para a locação"><li><span>01</span>Consultar</li><li><span>02</span>Retirar</li><li><span>03</span>Devolver</li></ol></div>
-          </section>
-          <section className="th-section th-split th-client-section" aria-labelledby="client-title"><div><p className="th-eyebrow">Para quem precisa de ajuda</p><h2 id="client-title">Você conta o problema.<br /><span className="th-title-soft">A gente começa por aí.</span></h2><p className="th-sub">Sem precisar traduzir seu relato para “tecnês”.</p></div><div><blockquote className="th-client-quote">“Meu notebook liga,<br />mas a tela fica preta.”<span>Isso já é um bom começo.</span></blockquote><ul className="th-benefits"><li><Check />Não sabe a marca ou a causa? Tudo bem.</li><li><Check />Leia e edite seu pedido antes de publicá-lo.</li></ul></div></section>
-          <section className="th-section th-split th-professional-section" id="profissionais" aria-labelledby="professionals-title"><div><p className="th-eyebrow">Para profissionais</p><h2 id="professionals-title">Seu conhecimento.<br /><span className="th-title-soft">Seu espaço.</span></h2><p className="th-sub">Um perfil pensado para apresentar o que você sabe fazer e os trabalhos que já realizou.</p>
-            <details><summary>Como será a área profissional</summary><p className="th-sub">O profissional poderá montar seu perfil, consultar solicitações, enviar propostas e acompanhar seus serviços. A área profissional ainda não está disponível neste site.</p></details>
-          </div><div className="th-profile-map"><p>O que um perfil poderá apresentar</p><div><Wrench /><span>Especialidades<small>Áreas em que você atua.</small></span></div><div><Images /><span>Portfólio<small>Trabalhos e experiências para conhecer.</small></span></div><div><BadgeCheck /><span>Certificações<small>Formações informadas pelo profissional.</small></span></div><div><MessageSquare /><span>Avaliações<small>Relatos após serviços concluídos.</small></span></div></div></section>
-          <section className="th-section th-final"><ArrowUpRight aria-hidden="true" /><h2>Vamos começar pelo que você já sabe.</h2><p className="th-sub">Descreva o problema. Os detalhes técnicos vêm depois.</p><button className="th-button" onClick={() => navigate('categories')}>Começar minha solicitação<ArrowRight size={17} /></button></section>
-        </>}
-      </main>
-      <footer className="th-footer"><span>TechHelp · Serviços de TI</span><button onClick={() => sectionLink('como-funciona')}>Como funciona</button><button onClick={() => sectionLink('ferramentas')}>Aluguel de ferramentas</button><button aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? <Play size={14} /> : <Pause size={14} />}{paused ? 'Retomar movimento' : 'Pausar movimento'}</button></footer>
-    </div>
+    <header className="th-header"><div className="th-inner th-header-inner"><button className="th-brand" onClick={() => navigate('home')} aria-label="TechHelp início"><svg className="th-mark" viewBox="0 0 26 26" aria-hidden="true"><rect className="th-mark-body" x="1" y="1" width="24" height="24" rx="7" strokeWidth="1.5" /><path className="th-mark-line" d="M6.5 18 12 12.5 15.5 16" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /><circle className="th-mark-signal" cx="18.5" cy="8.5" r="3" /></svg>TechHelp</button>
+      <nav className="th-nav" aria-label="Navegação principal">{navLinks()}{accountControls()}</nav><button className="th-button secondary th-menu-toggle" aria-expanded={menu} aria-controls="menu-mobile" onClick={() => setMenu(!menu)}>{menu ? <X size={18} /> : <Menu size={18} />}{menu ? 'Fechar' : 'Menu'}</button>
+    </div></header>
+    <nav id="menu-mobile" className="th-mobile-nav" aria-label="Menu mobile" hidden={!menu}><div className="th-inner">{navLinks()}{accountControls()}</div></nav>
+    <main id="conteudo" className={screen === 'home' ? undefined : 'th-app-content'} ref={main} tabIndex={-1}>
+      {sessionError && <p role="status" className="th-note">{sessionError}</p>}
+      {screen === 'request' && <RequestAssistant draft={draft} onChange={updateDraft} saved={saved} busy={busy || sessionLoading} blocked={uncertain} publishError={publishError} onCheckRequests={() => navigate('requests')} onHome={() => navigate('home')} onCategory={() => navigate('categories')} onPublish={publish} />}
+      {screen === 'technician' && session?.idTecnico && <TechnicianBoard key={session.idTecnico} idTecnico={session.idTecnico} onBack={() => navigate('home')} />}
+      {screen === 'requests' && session?.idCliente && <MyRequests key={session.idCliente} idCliente={session.idCliente} uncertain={uncertain} onBack={() => { setUncertain(false); setPublishError(''); navigate(draft.area ? 'request' : 'home'); }} />}
+      {screen === 'published' && published && <section className="th-wizard th-flow-content" role="status"><h1 className="th-form-title">Solicitação publicada!</h1><p>Pedido #{published.idSolicitacao}: {published.titulo}</p><p>Seu pedido foi recebido. Consulte Meus pedidos para comparar as propostas quando chegarem.</p><div className="th-actions"><button className="th-button" onClick={() => navigate('requests')}>Ver meus pedidos</button><button className="th-button secondary" onClick={() => navigate('categories')}>Criar outro pedido</button></div></section>}
+      {(screen === 'categories' || screen === 'unsure') && <section className="th-wizard"><button className="th-link" onClick={() => navigate('home')}>← Voltar à Home</button><div className="th-flow-content"><h1 className="th-form-title">{screen === 'unsure' ? 'Conte o que está acontecendo.' : 'Qual área parece mais próxima?'}</h1><p className="th-sub">Não precisa descobrir a causa. As jornadas disponíveis são Hardware, Redes e Software.</p>{screen === 'unsure' && <label className="th-label">Sua descrição<textarea className="th-field" maxLength={3000} value={draft.details} onChange={e => updateDraft({ ...draft, details: e.target.value })} placeholder="Ex.: meu notebook liga, mas a tela fica preta" /></label>}{catalogOptions()}</div></section>}
+      {screen === 'home' && <Landing catalog={catalog} paused={paused} hasDraft={Boolean(draft.area || draft.details.trim())} onChoose={choose} onRetry={retry} onUnsure={() => navigate('unsure')} onStart={() => navigate('categories')} onResume={resume} onRental={() => notify('Aluguel de ferramentas', 'As ferramentas serão do próprio TechHelp. O catálogo, as reservas e a entrega ainda estão em preparação.')} onProfessional={() => { if (session?.idTecnico && session.perfis.includes('TECNICO')) navigate('technician'); else { setAuthProfessional(true); setAuthOpen(true); } }} />}
+    </main>
+    <footer className="th-footer"><div className="th-inner th-footer-inner"><div className="th-footer-brand"><strong>TechHelp</strong><span>Serviços de TI e aluguel de ferramentas técnicas.</span><span>Projeto Integrador de Software, SENAC Taboão da Serra.</span></div><div className="th-footer-links"><button onClick={() => sectionLink('como-funciona')}>Como funciona</button><button onClick={() => sectionLink('ferramentas')}>Aluguel de ferramentas</button><button onClick={() => sectionLink('profissionais')}>Sou profissional</button><button aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? <Play size={14} /> : <Pause size={14} />}{paused ? 'Retomar movimento' : 'Pausar movimento'}</button></div></div></footer>
     <dialog className="th-dialog" ref={dialog} aria-labelledby="dialog-title" onClick={e => { if (e.target === e.currentTarget) dialog.current?.close(); }}><h2 id="dialog-title">{message.title}</h2><p>{message.body}</p><button className="th-button" onClick={() => dialog.current?.close()}>Entendi</button></dialog>
+    {authOpen && <AuthDialog initialProfessional={authProfessional} onClose={() => { setAuthOpen(false); setAuthProfessional(false); }} onAuthenticated={value => { setAuthProfessional(false); setSession(value); setSessionError(''); setAuthOpen(false); setMenu(false); setPublishError(''); }} />}
   </div>;
 }

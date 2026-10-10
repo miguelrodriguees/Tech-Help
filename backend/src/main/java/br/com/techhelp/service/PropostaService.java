@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @PreAuthorize("@acesso.admin()")
@@ -33,6 +34,7 @@ public class PropostaService {
     }
 
     @PreAuthorize("@acesso.tecnico(#dados.idTecnico())")
+    @Transactional
     public Proposta criar(CriarPropostaRequest dados) {
 
         Solicitacao solicitacao = solicitacaoRepository

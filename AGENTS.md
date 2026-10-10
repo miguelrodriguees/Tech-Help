@@ -10,6 +10,7 @@
 ## Comunicação e implementação
 
 - Responder em português, com explicações claras para quem está aprendendo Java, SQL, Spring, REST, JPA, Maven, React e TypeScript.
+- O usuário utiliza o Prompt de Comando do Windows (CMD). Fornecer comandos para CMD por padrão, usando `set "VAR=valor"` para variáveis de ambiente e `cd /d` para trocar de diretório; não usar sintaxe PowerShell nas instruções ao usuário, salvo solicitação explícita.
 - Antes de mudanças importantes, explicar o problema, os arquivos envolvidos e a razão da solução; depois implementar, verificar e relatar o resultado. Não explicar cada linha trivial.
 - Distinguir planejado, implementado e testado; separar falhas reproduzidas de riscos identificados por leitura. Não apresentar testes antigos como uma nova execução.
 - Não apagar código ou recursos aparentemente sem uso antes de entender sua finalidade e referências.
@@ -33,9 +34,9 @@
 
 ## Comandos usuais de verificação
 
-No PowerShell, dentro de `backend/`:
+No CMD, dentro de `backend/`:
 
-```powershell
+```bat
 .\mvnw.cmd -B -ntp compile
 .\mvnw.cmd -B -ntp test
 .\mvnw.cmd -B -ntp spring-boot:run
@@ -45,7 +46,7 @@ O teste de contexto existente depende do MariaDB e, sem sobrescrita, utiliza `te
 
 Dentro de `frontend/`:
 
-```powershell
+```bat
 npm.cmd test
 npm.cmd run build
 npm.cmd run lint

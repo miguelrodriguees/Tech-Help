@@ -9,6 +9,10 @@ interface Props {
   onCategory: () => void;
   onPublish: () => void;
   saved: boolean;
+  busy: boolean;
+  blocked: boolean;
+  publishError: string;
+  onCheckRequests: () => void;
 }
 
 function Options({ name, title, options, value, onChange }: {
@@ -25,7 +29,7 @@ function Options({ name, title, options, value, onChange }: {
   </fieldset>;
 }
 
-export default function RequestAssistant({ draft, onChange, onHome, onCategory, onPublish, saved }: Props) {
+export default function RequestAssistant({ draft, onChange, onHome, onCategory, onPublish, saved, busy, blocked, publishError, onCheckRequests }: Props) {
   const [stage, setStage] = useState(0);
   const [error, setError] = useState('');
   const heading = useRef<HTMLHeadingElement>(null);
@@ -60,18 +64,19 @@ export default function RequestAssistant({ draft, onChange, onHome, onCategory, 
   }
 
   return <section className="th-wizard" id="solicitacao" aria-label="Solicitação de serviço">
-    <div className="th-wizard-links">
+    <div className="th-wizard-top">
       <button className="th-link" onClick={onHome}><ArrowLeft size={16} /> Voltar à Home</button>
       <button className="th-link" onClick={onCategory}>Trocar categoria</button>
     </div>
-    <ol className="th-progress" aria-label="Etapas da solicitação">
-      {stages.map((label, index) => <li className={index <= stage ? 'active' : ''} aria-current={index === stage ? 'step' : undefined} key={label}>
-        <span className="th-step-dot">{index < stage ? <Check size={14} /> : index + 1}</span><span>{label}</span>
+    <div className="th-rail"><ol className="th-rail-steps" aria-label="Etapas da solicitação">
+      {stages.map((label, index) => <li className={index < stage ? 'is-done' : index === stage ? 'is-now' : ''} aria-current={index === stage ? 'step' : undefined} key={label}>
+        <span className="th-dot">{index < stage ? <Check size={14} /> : index + 1}</span><span>{label}</span>
       </li>)}
     </ol>
-    <div className="th-progress-track" aria-hidden="true"><div style={{ width: `${(stage + 1) * 25}%` }} /></div>
+    <div className="th-rail-track" aria-hidden="true"><div style={{ width: `${(stage + 1) * 25}%` }} /></div></div>
     <p className="th-sr-only" role="status">Etapa {stage + 1} de 4: {stages[stage]}</p>
-    <form className="th-flow-content" key={stage} onSubmit={event => { event.preventDefault(); if (stage < 3) advance(); else publish(); }}>
+    <form className="th-panel th-flow" key={stage} onSubmit={event => { event.preventDefault(); if (stage < 3) advance(); else publish(); }}>
+      <fieldset disabled={busy} className="th-auth-fields">
       {stage === 0 && <>
         <p className="th-eyebrow">{draft.area}</p>
         <h1 className="th-form-title" ref={heading} tabIndex={-1}>Vamos entender seu problema.</h1>
@@ -110,13 +115,16 @@ export default function RequestAssistant({ draft, onChange, onHome, onCategory, 
           <div><dt>Atendimento <button type="button" className="th-link" aria-label="Editar atendimento" onClick={() => go(1)}>Editar</button></dt><dd>{draft.mode} · {draft.urgency}<br />{draft.mode === 'Presencial' ? `${draft.city} · ${draft.district}` : 'Sem endereço para atendimento remoto'}</dd></div>
           <div><dt>Detalhes <button type="button" className="th-link" aria-label="Editar detalhes" onClick={() => go(2)}>Editar</button></dt><dd>{draft.details || 'Nenhum detalhe adicional.'}</dd></div>
         </dl>
-        <p className="th-note">A publicação ainda não está disponível. Você já pode preparar e revisar seu pedido; nenhum dado será enviado.</p>
+        <p className="th-note">Para publicar, entre com uma conta de cliente. Seu pedido será enviado aos técnicos somente ao confirmar a publicação.</p>
       </>}
       {error && <p role="alert" className="th-note th-error">{error}</p>}
+      {publishError && <p role="alert" className="th-note th-error">{publishError}</p>}
+      {blocked && <button type="button" className="th-button secondary" onClick={onCheckRequests}>Conferir meus pedidos</button>}
       <div className="th-actions">
         <button type="button" className="th-button secondary" onClick={() => stage === 0 ? onCategory() : go(stage - 1)}><ArrowLeft size={16} />Voltar</button>
-        <button className="th-button" type="submit">{stage === 3 ? 'Publicar solicitação' : stage === 2 ? 'Revisar solicitação' : 'Continuar'}{stage === 3 ? <Send size={16} /> : <ArrowRight size={16} />}</button>
+        <button className="th-button" type="submit" disabled={busy || (stage === 3 && blocked)}>{busy ? 'Aguarde…' : stage === 3 ? 'Publicar solicitação' : stage === 2 ? 'Revisar solicitação' : 'Continuar'}{stage === 3 ? <Send size={16} /> : <ArrowRight size={16} />}</button>
       </div>
+      </fieldset>
     </form>
     <p className="th-wizard-meta"><BookmarkCheck size={16} />{saved ? 'Rascunho guardado nesta aba. Fechar a aba encerra este armazenamento.' : 'Respostas preservadas enquanto a página estiver aberta. O navegador não permitiu guardar o rascunho.'}</p>
   </section>;

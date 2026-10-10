@@ -86,6 +86,10 @@ public class ServicoService {
                                 )
                         );
 
+        if (!List.of("ABERTA", "EM_NEGOCIACAO").contains(solicitacao.getStatus())) {
+            throw new IllegalArgumentException("Esta solicitação não aceita mais propostas");
+        }
+
         proposta.setStatus(
                 "ACEITA"
         );

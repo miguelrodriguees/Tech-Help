@@ -174,6 +174,40 @@ class SegurancaApiTests {
     }
 
     @Test
+    void clienteNaoAceitaPropostaDeSolicitacaoJaContratada() throws Exception {
+        solicitacao.setStatus("CONTRATADA");
+        mvc.perform(post("/servicos/aceitar-proposta/200").session(login(1)).with(csrf()))
+                .andExpect(status().isBadRequest());
+        verify(servicos, never()).save(any());
+        verify(propostas, never()).save(any());
+    }
+
+    @Test
+    void oportunidadesIncluemPedidosEmNegociacao() throws Exception {
+        solicitacao.setStatus("EM_NEGOCIACAO");
+        when(solicitacoes.findByStatusInOrderByDataCadastroDesc(List.of("ABERTA", "EM_NEGOCIACAO")))
+                .thenReturn(List.of(solicitacao));
+        mvc.perform(get("/solicitacoes/abertas").session(login(2)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].status").value("EM_NEGOCIACAO"));
+        mvc.perform(get("/solicitacoes/abertas").session(login(1)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void aceiteRecusaOutrasPropostasEImpedeRepeticao() throws Exception {
+        Proposta outra = new Proposta(); outra.setIdProposta(201L); outra.setStatus("ENVIADA");
+        when(propostas.findByIdSolicitacaoAndStatus(100L, "ENVIADA")).thenReturn(List.of(outra));
+        var cliente = login(1);
+        mvc.perform(post("/servicos/aceitar-proposta/200").session(cliente).with(csrf()))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("AGENDADO"));
+        assertThat(outra.getStatus()).isEqualTo("RECUSADA");
+        assertThat(solicitacao.getStatus()).isEqualTo("CONTRATADA");
+        mvc.perform(post("/servicos/aceitar-proposta/200").session(cliente).with(csrf()))
+                .andExpect(status().isBadRequest());
+        verify(servicos, times(1)).save(any());
+    }
+
+    @Test
     void rotasPrivadasExigemLogin() throws Exception {
         for (String path : List.of("/auth/me", "/solicitacoes/100", "/solicitacoes/abertas",
                 "/servicos/300", "/perfis", "/usuarios/1", "/conversas/1")) {

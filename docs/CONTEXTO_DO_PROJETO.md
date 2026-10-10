@@ -1,5 +1,53 @@
 # Contexto e continuidade do Tech Help
 
+## Prioridade definida pelo usuário — 08/10/2026
+
+Priorizar a conclusão funcional do MVP. Adiar ajustes estéticos da Home e criação do símbolo. Ideias discutidas para depois: manter “Qual parte precisa de ajuda?” como entrada principal; remover a repetição de categorias sob o notebook e o convite final equivalente; manter retomada de rascunho quando existir. Para identidade, explorar um monograma TH com detalhe de conexão; conceito ainda não desenhado nem escolhido definitivamente. Não preencher espaços com seções sem utilidade.
+
+Próxima etapa funcional recomendada: integrar acompanhamento, início e conclusão dos serviços às telas, aproveitando as operações existentes no backend, e depois integrar avaliação. Aluguel ainda exige correção de estoque, catálogo e administração; entrega/taxa permanece parte da visão original e precisa de implementação ou adiamento explícito no escopo. Esta atualização é documental, sem alteração de código, execução de testes ou commit/push.
+
+## Referência visual corrigida — prévia integrada enviada pelo usuário
+
+O usuário esclareceu que o frontend da auditoria não era sua versão visual final. A referência aprovada passou a ser `TechHelp_Previa_Integrada (3).html`, fornecida da pasta Downloads. Uma cópia integral está em [referencias/TechHelp_Previa_Integrada.html](referencias/TechHelp_Previa_Integrada.html), SHA-256 `CA2A5F77E36D06EDF8862E83A3CA07D71F5FC8B89AE3710F8F355E219C95938F`. Esse arquivo é uma referência histórica de design: contém catálogo simulado e avisos antigos de funcionalidades indisponíveis, não representa o estado funcional atual.
+
+A interface React foi adaptada à referência: cabeçalho fixo, notebook em módulos animados no canvas, entrada por categorias, explorador de serviços com SVGs, sequência de quatro passos ligada à rolagem, novas seções de aluguel/profissionais e rodapé. `features/home/Landing.tsx` integra a apresentação; `preview.css`, `moduleField.js` e `illustrations.js` preservam estilos e desenhos da prévia. Os módulos JavaScript visuais têm declarações de tipos para uso pelo React/TypeScript. Não foi adicionada dependência.
+
+`Home.tsx` mantém sessão, logout, publicação, rascunho, Meus pedidos e Área do técnico. Categorias vêm da API; o catálogo simulado da prévia não foi incorporado. O CTA profissional abre cadastro com técnico selecionado ou a área do técnico autenticado. O assistente usa a trilha e o painel da nova identidade; autenticação e propostas seguem integradas. Avisos de prévia sem envio foram retirados, mas aluguel, perfil completo e acompanhamento ainda são identificados como pendentes.
+
+Verificações antes da interrupção: 14 testes Node, lint e build passaram, após executar fora da restrição que causava `spawn EPERM`. Navegador: Home com categorias reais, canvas, assistente e perguntas condicionais, retorno com rascunho, cadastro com campos de técnico, menu mobile e diálogo de login. Layout conferido no desktop e em viewport de 390 × 844, sem excesso horizontal na Home. O navegador não permitiu abrir o HTML por `file://`; a referência foi lida como código e a aplicação React foi inspecionada em localhost. Não afirmar comparação visual pixel a pixel ou novo teste completo de publicação/aceite nesta adaptação.
+
+Nenhum banco ou backend foi alterado nesta etapa visual. As verificações no navegador não criaram contas nem registros de negócio. Tudo permanece salvo localmente, sem novo commit/push. Validar o resultado visual com o usuário antes de avançar para acompanhamento do serviço.
+
+Na retomada após o limite de créditos, foi ajustado o cancelamento da celebração em `Landing.tsx` ao pausar movimento, ativar redução de movimento ou sair da Home. O link de pular para o conteúdo também foi colocado acima do cabeçalho fixo. Lint e build foram executados novamente e passaram. A referência e o código estavam preservados; não foi necessário refazer a integração.
+
+## Atualização mais recente — propostas em 26/09/2026
+
+Implementadas localmente a Área do técnico (`TechnicianBoard.tsx`) e a comparação/aceite pelo cliente (`ClientProposals.tsx`, acessível em Meus pedidos). O técnico consulta oportunidades, envia valor, condições, prazo e disponibilidade e acompanha suas propostas. O cliente compara e confirma o aceite, sem pagamento. As telas consultam a identidade da sessão antes das escritas, bloqueiam cliques repetidos e exigem atualização após resultado incerto.
+
+No backend, a lista de oportunidades inclui ABERTA e EM_NEGOCIACAO: receber a primeira proposta não deve ocultar o pedido dos demais técnicos. A criação de proposta é transacional, incluindo a mudança do pedido para negociação. O aceite verifica se o pedido ainda permite negociação, cria o serviço AGENDADO e recusa outras propostas ENVIADA. Essas verificações não garantem exclusão entre transações concorrentes; controle de concorrência permanece pendente.
+
+Antes da interrupção, passaram 26 testes Maven (25 de segurança/fluxo com repositories simulados e um de contexto), 14 testes Node, build e lint do frontend. Os relatórios Maven foram relidos nesta retomada; isso não representa uma nova execução da suíte. O envio de proposta pelo técnico foi validado no navegador com o backend apontado para `tech_help_teste`.
+
+Retomada: servidores anteriores estavam desligados. MariaDB, backend em 8082 e Vite em 5173 foram iniciados para o teste. O log confirmou `tech_help_teste` e validação JPA. No navegador, o cliente comparou duas propostas, cancelou a confirmação e depois aceitou a de R$ 150,50. Após atualização, a interface e uma consulta SQL confirmaram pedido CONTRATADA, proposta 8 ACEITA, proposta 7 RECUSADA e um único serviço 6 AGENDADO. A conta do técnico confirmou a proposta aceita e a retirada do pedido das oportunidades. Logout verificado.
+
+Foram removidos somente os próprios registros temporários, por IDs e identificadores conferidos: serviço 6, propostas 7/8, solicitação 7, cliente 7, técnicos 6/7, usuários 12/13/14 e seus vínculos de perfil. Os totais retornaram a 7 usuários, 4 solicitações, 5 propostas e 4 serviços. Nenhuma alteração de esquema ou escrita de negócio em `tech_help`; contadores automáticos não foram redefinidos. Permanece o aviso do Hibernate sobre MariaDB 10.4.32 abaixo do mínimo 10.6 suportado.
+
+Limites: técnicos ainda aparecem por número na comparação; perfil público completo, execução, conclusão e avaliação não estão integrados às telas. Próxima etapa funcional: acompanhamento e execução do serviço, seguida da avaliação. Alterações de login/publicação e propostas permanecem locais, sem novo commit/push nesta retomada.
+
+## Atualização mais recente — integração do frontend em 25/09/2026
+
+Após os commits `f34647d` (documentação) e `348d369` (segurança do backend), confirmados no GitHub em `feat/home-grafite-assistente`, foi implementada localmente a integração de cadastro, login e publicação. Esta seção substitui as observações históricas abaixo que descrevem Entrar/Publicar como indisponíveis.
+
+- `AuthDialog.tsx` cadastra clientes/técnicos e faz login; `api.ts` envia cookies, obtém CSRF antes das escritas e distingue ausência de sessão de falha de conexão.
+- `Home.tsx` restaura a sessão, permite logout, conserva o assistente durante login e publica usando o cliente consultado em `/auth/me`. Conta de técnico sem perfil CLIENTE não publica pedidos.
+- `publication.ts` valida e converte respostas em título/descrição, atendimento e urgência. Cidade e bairro entram na descrição presencial, sem inventar endereço cadastrado. `MyRequests.tsx` consulta os pedidos da conta.
+- Rascunho mantido em erros e durante autenticação; removido somente após sucesso. Bloqueio de cliques repetidos e conferência dos pedidos após envio sem confirmação. Não existe idempotência no servidor, portanto não há garantia absoluta contra duplicação após falhas de rede/recarregamento.
+- Verificações: 11 testes Node passaram, build de produção e ESLint passaram. Testes automatizados cobrem regras do rascunho, conversão da publicação e transporte HTTP simulado; não são uma suíte automatizada de navegador.
+- Validação manual no navegador com frontend em 5173 e backend temporário em 8082 apontado explicitamente para `tech_help_teste`: cadastro de cliente e técnico, senha incorreta, login, rascunho preservado, publicação real, Meus pedidos, sessão restaurada ao recarregar, rascunho limpo após sucesso, logout e bloqueio de publicação por técnico. Revisão visual em largura de celular e desktop.
+- Foram criados apenas dois usuários e uma solicitação temporários identificados. Após remoção dos próprios registros, os totais retornaram a 7 usuários e 4 solicitações. Dados preexistentes e esquema preservados; `tech_help` não foi usado para escrita. IDs automáticos podem apresentar saltos devido aos testes.
+
+Detalhes e comandos estão no [README do frontend](../frontend/README.md). Nenhuma dependência nova foi adicionada. As alterações desta etapa do frontend ainda não foram incluídas em commit/push. Próxima etapa recomendada: área do técnico para consultar oportunidades e enviar propostas, seguida da comparação/aceite pelo cliente. Recuperação de senha, verificação de e-mail, estoque e demais pendências históricas permanecem abertas.
+
 ## Atualização de desenvolvimento — 25/09/2026
 
 A autenticação por sessão e a autorização do backend foram implementadas localmente, após a etapa documental abaixo. Este registro mais recente substitui as afirmações históricas de ausência de autenticação. Detalhes de endpoints, CSRF, permissões, arquivos e limites estão em [AUTENTICACAO.md](AUTENTICACAO.md).

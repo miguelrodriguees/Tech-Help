@@ -179,8 +179,8 @@ public class SolicitacaoService {
     public List<Solicitacao> listarAbertas() {
 
         return solicitacaoRepository
-                .findByStatusOrderByDataCadastroDesc(
-                        "ABERTA"
+                .findByStatusInOrderByDataCadastroDesc(
+                        List.of("ABERTA", "EM_NEGOCIACAO")
                 );
     }
 

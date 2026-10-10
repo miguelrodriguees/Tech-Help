@@ -1,6 +1,6 @@
 # Autenticação e permissões do backend
 
-Implementação local de 25/09/2026. O frontend ainda precisa integrar este contrato.
+Backend implementado em 25/09/2026. O frontend agora integra cadastro, login, logout, consulta de sessão e publicação; consulte [o README do frontend](../frontend/README.md).
 
 ## Como funciona
 
@@ -54,6 +54,6 @@ Recurso alheio ou inexistente pode retornar 403 antes da consulta de negócio, e
 
 `TechhelpBackendApplicationTests` continua validando a inicialização com o banco configurado (por padrão `tech_help` e `ddl-auto=validate`). Não cria registros de teste.
 
-Ainda faltam telas de cadastro/login e integração da publicação no frontend. Recuperação de senha, verificação de e-mail e limitação de tentativas de login não foram implementadas. Para implantação com HTTPS será necessário configurar cookie Secure e as origens reais. Problemas de estoque e concorrência identificados na auditoria permanecem separados desta etapa.
+As telas de cadastro/login e a publicação foram integradas em uma etapa posterior do frontend. Recuperação de senha, verificação de e-mail e limitação de tentativas de login não foram implementadas. Para implantação com HTTPS será necessário configurar cookie Secure e as origens reais. Problemas de estoque e concorrência identificados na auditoria permanecem separados desta etapa.
 
 O usuário autorizou o commit e o push desta etapa na branch `feat/home-grafite-assistente`. A confirmação de publicação deve ser feita pelo histórico Git e pela referência remota. O envio dos arquivos não inclui os dados do MariaDB nem constitui backup do banco.
