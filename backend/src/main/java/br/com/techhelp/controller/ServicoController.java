@@ -1,6 +1,8 @@
 package br.com.techhelp.controller;
 
 import br.com.techhelp.model.Servico;
+import br.com.techhelp.dto.AgendarServicoRequest;
+import jakarta.validation.Valid;
 import br.com.techhelp.service.ServicoService;
 
 import java.util.List;
@@ -42,6 +44,16 @@ public class ServicoController {
 
         return servicoService
                 .buscarPorId(idServico);
+    }
+
+    @PostMapping("/{idServico}/agendar")
+    public Servico agendar(@PathVariable Long idServico, @Valid @RequestBody AgendarServicoRequest request) {
+        return servicoService.agendar(idServico, request.dataAgendada());
+    }
+
+    @PostMapping("/{idServico}/cancelar")
+    public Servico cancelar(@PathVariable Long idServico) {
+        return servicoService.cancelar(idServico);
     }
 
     @PostMapping("/{idServico}/iniciar")

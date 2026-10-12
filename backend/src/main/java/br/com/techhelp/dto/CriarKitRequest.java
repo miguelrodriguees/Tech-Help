@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 
 public record CriarKitRequest(
 
@@ -17,6 +18,7 @@ public record CriarKitRequest(
 
         @NotNull
         @DecimalMin("0.00")
+        @Digits(integer = 10, fraction = 2)
         BigDecimal valorDiaria
 
 ) {

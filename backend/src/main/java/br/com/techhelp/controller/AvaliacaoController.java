@@ -1,6 +1,7 @@
 package br.com.techhelp.controller;
 
 import br.com.techhelp.dto.CriarAvaliacaoRequest;
+import br.com.techhelp.dto.AvaliarAtendimentoRequest;
 import br.com.techhelp.model.Avaliacao;
 import br.com.techhelp.service.AvaliacaoService;
 import jakarta.validation.Valid;
@@ -33,6 +34,13 @@ public class AvaliacaoController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(avaliacao);
+    }
+
+    @PostMapping("/servico/{idServico}/cliente")
+    public ResponseEntity<Avaliacao> avaliarAtendimento(@PathVariable Long idServico,
+            @Valid @RequestBody AvaliarAtendimentoRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(avaliacaoService.avaliarAtendimento(idServico, request));
     }
 
     @GetMapping("/usuario/{idUsuario}")

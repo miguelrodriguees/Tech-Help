@@ -86,7 +86,7 @@ export default function TechnicianBoard({ idTecnico, onBack }: { idTecnico: numb
         <p>{money(p.valor)} · {statusLabel(p.status)}</p>
         <p>Prazo: {p.prazoEstimadoDias === null ? 'A combinar' : `${p.prazoEstimadoDias} dia(s)`} · Disponibilidade: {dateLabel(p.dataDisponivel)}</p>
         <p className="th-request-description">{p.mensagem || 'Sem condições adicionais.'}</p>
-        {p.status === 'ACEITA' && <p className="th-note">O cliente aceitou sua proposta. As telas de execução do serviço serão integradas na próxima etapa.</p>}
+        {p.status === 'ACEITA' && <p className="th-note">O cliente aceitou sua proposta. Acesse Meus serviços no menu para iniciar e concluir o atendimento.</p>}
       </li>)}</ul>
     </>}
   </section>;

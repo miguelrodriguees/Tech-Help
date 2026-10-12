@@ -10,7 +10,6 @@
 .th-mobile-nav { position: sticky; top: 76px; max-height: calc(100dvh - 76px); overflow-y: auto; }
 .journey-confetti i { opacity: 0; }
 .hx-figure > div { width: 100%; }
-@media (max-width: 1150px) { .th-nav { display: none; } .th-menu-toggle { display: inline-flex; } }
 @media (max-width: 700px) { .th-progress li { flex-direction: column; align-items: flex-start; font-size: 11px; } .th-options { grid-template-columns: 1fr; } .th-app-content { padding-top: 12px; } }
 /* Assistente: quatro etapas, progresso e seleção acessível pelo teclado. */
 .th-wizard { max-width: 780px; margin: auto; padding: 28px 0 50px; scroll-margin-top: 24px; }
@@ -59,3 +58,25 @@ textarea.th-field { min-height: 130px; resize: vertical; }
 @keyframes th-enter { from { opacity: .3; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes th-float { 0%,100% { translate: 0 0; } 50% { translate: 0 -5px; } }
 .th-motion-paused *, .th-motion-paused *:before { animation: none !important; transition: none !important; }
+
+/* Duas faixas preservam os atalhos da conta sem comprimir os links do site. */
+.techhelp-site { --header-height: 77px; }
+.th-account-bar { border-top: 1px solid var(--line); background: var(--panel); }
+.th-account-nav { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; padding-block: 8px; }
+.th-account-nav .th-account-name { margin-right: auto; padding-right: 16px; max-width: 190px; color: var(--ink-dim); font-size: 14px; }
+.th-account-nav .th-nav-link { font-size: 14px; padding-inline: 10px; }
+.th-account-nav .th-button { min-height: 44px; padding: 10px 16px; margin-left: 8px; }
+.techhelp-site section[id], #conteudo { scroll-margin-top: calc(var(--header-height) + 16px); }
+.th-mobile-nav { top: var(--header-height); max-height: calc(100dvh - var(--header-height)); }
+.journey:not(.journey-static) .journey-pin { top: var(--header-height); height: calc(100svh - var(--header-height)); }
+@media (min-width: 961px) {
+  .th-nav { display: flex; }
+  .th-menu-toggle, .th-mobile-nav { display: none; }
+}
+@media (max-width: 960px) {
+  .th-account-bar { display: none; }
+  .th-mobile-nav .th-account-name { max-width: 100%; padding-block: 16px 8px; border-top: 1px solid var(--line); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .journey:not(.journey-static) .journey-pin { top: auto; height: auto; }
+}

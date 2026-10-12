@@ -9,7 +9,10 @@ import br.com.techhelp.model.Kit;
 import br.com.techhelp.repository.AluguelItemRepository;
 import br.com.techhelp.repository.AluguelRepository;
 import br.com.techhelp.repository.KitRepository;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -24,18 +27,24 @@ public class AluguelItemService {
     private final AluguelItemRepository aluguelItemRepository;
     private final AluguelRepository aluguelRepository;
     private final KitRepository kitRepository;
+    private final EntityManager entityManager;
+    private final EstoqueAluguelService estoque;
 
     public AluguelItemService(
             AluguelItemRepository aluguelItemRepository,
             AluguelRepository aluguelRepository,
-            KitRepository kitRepository
+            KitRepository kitRepository,
+            EntityManager entityManager,
+            EstoqueAluguelService estoque
     ) {
         this.aluguelItemRepository = aluguelItemRepository;
         this.aluguelRepository = aluguelRepository;
         this.kitRepository = kitRepository;
+        this.entityManager = entityManager;
+        this.estoque = estoque;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public AluguelItem adicionar(
             Long idAluguel,
@@ -50,6 +59,8 @@ public class AluguelItemService {
                                         "Aluguel não encontrado"
                                 ));
 
+        entityManager.refresh(aluguel, LockModeType.PESSIMISTIC_WRITE);
+
         if (!"RESERVADO".equals(aluguel.getStatus())) {
             throw new IllegalArgumentException(
                     "Só é possível adicionar itens em um aluguel reservado"
@@ -63,6 +74,8 @@ public class AluguelItemService {
                                 new NoSuchElementException(
                                         "Kit não encontrado"
                                 ));
+
+        entityManager.refresh(kit, LockModeType.PESSIMISTIC_WRITE);
 
         if (!"DISPONIVEL".equals(kit.getStatus())) {
             throw new IllegalArgumentException(
@@ -80,6 +93,8 @@ public class AluguelItemService {
                     "Este kit já foi adicionado ao aluguel"
             );
         }
+
+        estoque.validarReserva(kit, request.quantidade());
 
         AluguelItem item = new AluguelItem();
 
@@ -119,7 +134,7 @@ public class AluguelItemService {
                 );
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public void remover(
             Long idAluguel,
@@ -133,6 +148,8 @@ public class AluguelItemService {
                                 new NoSuchElementException(
                                         "Aluguel não encontrado"
                                 ));
+
+        entityManager.refresh(aluguel, LockModeType.PESSIMISTIC_WRITE);
 
         if (!"RESERVADO".equals(aluguel.getStatus())) {
             throw new IllegalArgumentException(
@@ -162,9 +179,13 @@ public class AluguelItemService {
                                         "Kit não encontrado"
                                 ));
 
+        entityManager.refresh(kit, LockModeType.PESSIMISTIC_WRITE);
         aluguelItemRepository.delete(item);
 
-        kit.setStatus("DISPONIVEL");
+        if ("INDISPONIVEL".equals(kit.getStatus())
+                && aluguelItemRepository.contarReservasAtivasDoKit(kit.getIdKit()) == 0) {
+            kit.setStatus("DISPONIVEL");
+        }
         kitRepository.save(kit);
 
         recalcularValorTotal(aluguel);

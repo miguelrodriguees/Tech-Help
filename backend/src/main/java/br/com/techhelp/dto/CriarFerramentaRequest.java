@@ -7,6 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 
 public record CriarFerramentaRequest(
 
@@ -22,6 +23,7 @@ public record CriarFerramentaRequest(
 
         @NotNull
         @DecimalMin("0.00")
+        @Digits(integer = 10, fraction = 2)
         BigDecimal valorDiaria
 
 ) {

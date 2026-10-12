@@ -57,3 +57,32 @@ Recurso alheio ou inexistente pode retornar 403 antes da consulta de negócio, e
 As telas de cadastro/login e a publicação foram integradas em uma etapa posterior do frontend. Recuperação de senha, verificação de e-mail e limitação de tentativas de login não foram implementadas. Para implantação com HTTPS será necessário configurar cookie Secure e as origens reais. Problemas de estoque e concorrência identificados na auditoria permanecem separados desta etapa.
 
 O usuário autorizou o commit e o push desta etapa na branch `feat/home-grafite-assistente`. A confirmação de publicação deve ser feita pelo histórico Git e pela referência remota. O envio dos arquivos não inclui os dados do MariaDB nem constitui backup do banco.
+
+## Avaliação simplificada pelo cliente
+
+`POST /avaliacoes/servico/{idServico}/cliente` recebe somente `nota` (inteiro de 1 a 5) e `comentario` (opcional, até 3000 caracteres). Exige sessão, CSRF e perfil CLIENTE do dono do atendimento; não permite ao técnico ou administrador avaliar em nome do cliente. O backend deriva os usuários avaliador/avaliado dos participantes registrados e reaproveita as regras de conclusão, proibição de autoavaliação e repetição. O endpoint anterior continua disponível com suas permissões existentes.
+
+`GET /avaliacoes/servico/{idServico}` continua restrito aos participantes ou administrador e permite à interface consultar o resultado antes de oferecer um novo envio. Os testes com repositories simulados cobrem o novo endpoint e não comprovam concorrência nem as restrições do banco real.
+
+## Identificação pública mínima dos técnicos
+
+`GET /tecnicos/resumos?ids=20,21` usa a leitura pública já prevista para técnicos. Retorna exclusivamente `idTecnico` e `nome`, por DTO, sem serializar o usuário. Consulta de 1 a 50 IDs positivos; técnicos inexistentes, contas inativas e nomes ausentes não entram na resposta. Os endpoints anteriores de técnicos permanecem com o contrato existente. Os testes conferem a ausência de CPF, telefone, e-mail, hash e ID do usuário na nova resposta.
+
+## Agendamento e cancelamento de serviços
+
+- `POST /servicos/{idServico}/agendar`, corpo `{"dataAgendada":"2099-05-20T14:30:00"}`: técnico responsável ou ADMIN; serviço AGENDADO e data futura em America/Sao_Paulo.
+- `POST /servicos/{idServico}/cancelar`: cliente/técnico participante ou ADMIN; somente AGENDADO. Atualiza serviço para CANCELADO e solicitação para CANCELADA na mesma transação. Não reabre pedido nem altera o histórico das propostas.
+
+As quatro operações de edição do serviço (agendar, cancelar, iniciar, concluir) atualizam a entidade a partir do banco com `EntityManager.refresh` e bloqueio PESSIMISTIC_WRITE antes de conferir o estado, dentro da transação. Isso evita decidir a partir de uma entidade antiga carregada durante a autorização. Não houve alteração do esquema. O aceite de propostas não foi incluído nessa proteção. Testes com EntityManager/repositories simulados verificam regras e validação após atualização, mas não comprovam o bloqueio sob concorrência real no MariaDB.
+
+## Catálogo administrativo integrado
+
+O menu do frontend exige perfil ADMIN. A segurança definitiva permanece nos serviços: POST /ferramentas, POST /kits, POST /kits/{idKit}/ferramentas e DELETE /kits/{idKit}/ferramentas/{idFerramenta} exigem administrador e CSRF. Não foram abertas novas permissões nem criado cadastro público de administradores.
+
+Testes MVC acrescentados verificam rejeição de clientes/técnicos, ausência de CSRF, cadastro por ADMIN, montagem/remoção e bloqueio da composição com aluguel ativo. Usam repositories simulados. A interface reconfirma o ID de usuário e o perfil administrativo antes de cada escrita; após falha, exige atualizar o catálogo e conferir o resultado.
+
+## Reserva completa em uma transação
+
+POST /alugueis/reservar recebe idUsuario, idKit, quantidade, dataPrevistaRetirada e dataPrevistaDevolucao. Exige dono da conta autenticado e CSRF. ReservaService chama os serviços existentes dentro de uma transação READ_COMMITTED; falha de estoque desfaz também o aluguel. O endpoint valida retirada futura em America/Sao_Paulo e reaproveita a exigência de devolução posterior. Não há permissão para reservar em nome de outro usuário, nem para o ADMIN nesse endpoint.
+
+ReservaIntegracaoTests é opt-in (-Dtechhelp.rental.integration=true -Dtechhelp.integration.database=tech_help, indicando também a URL do datasource). Ele confere o banco efetivo antes de escrever; usa fixtures UUID próprias e limpeza somente por IDs gerados. A execução realizada comprovou rollback, disputa de ferramenta compartilhada e cancelamento. Testes MVC cobrem usuário errado, visitante, CSRF, quantidade e datas inválidas.

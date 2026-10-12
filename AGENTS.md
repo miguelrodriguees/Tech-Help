@@ -9,7 +9,10 @@
 
 ## Comunicação e implementação
 
+- O usuário autorizou seguir pelas próximas pendências do MVP sem pedir confirmação a cada etapa. Avançar com implementação e testes; perguntar somente quando faltar decisão, informação ou ação indispensável do usuário. Preservar as regras de banco e Git abaixo.
+
 - Responder em português, com explicações claras para quem está aprendendo Java, SQL, Spring, REST, JPA, Maven, React e TypeScript.
+- Ao apresentar uma tarefa ou próxima etapa, destacar em negrito o modelo e o esforço de raciocínio recomendados (ex.: **Modelo recomendado: Sol — médio**). Adequar a recomendação à complexidade e ao consumo, reservando Astra para análises difíceis, segurança e concorrência; não transformar a recomendação em exigência nem afirmar que o seletor foi alterado. Reconfirmar nomes/disponibilidade quando necessário.
 - O usuário utiliza o Prompt de Comando do Windows (CMD). Fornecer comandos para CMD por padrão, usando `set "VAR=valor"` para variáveis de ambiente e `cd /d` para trocar de diretório; não usar sintaxe PowerShell nas instruções ao usuário, salvo solicitação explícita.
 - Antes de mudanças importantes, explicar o problema, os arquivos envolvidos e a razão da solução; depois implementar, verificar e relatar o resultado. Não explicar cada linha trivial.
 - Distinguir planejado, implementado e testado; separar falhas reproduzidas de riscos identificados por leitura. Não apresentar testes antigos como uma nova execução.

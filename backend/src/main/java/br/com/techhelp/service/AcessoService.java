@@ -146,6 +146,13 @@ public class AcessoService {
         return admin() || servicos.findById(id).map(s -> tecnico(s.getIdTecnico())).orElse(false);
     }
 
+    public boolean avaliarComoCliente(Long id) {
+        var u = atual();
+        return perfis(u).contains("CLIENTE") && servicos.findById(id)
+                .flatMap(s -> clientes.findById(s.getIdCliente()))
+                .map(c -> c.getIdUsuario().equals(u.getIdUsuario())).orElse(false);
+    }
+
     public boolean aluguel(Long id) {
         return admin() || alugueis.findById(id).map(a -> mesmoUsuario(a.getIdUsuario())).orElse(false);
     }

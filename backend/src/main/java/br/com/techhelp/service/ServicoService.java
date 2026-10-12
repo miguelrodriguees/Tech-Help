@@ -12,11 +12,15 @@ import br.com.techhelp.repository.ServicoRepository;
 import br.com.techhelp.repository.SolicitacaoRepository;
 import br.com.techhelp.repository.TecnicoRepository;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -29,22 +33,63 @@ public class ServicoService {
     private final SolicitacaoRepository solicitacaoRepository;
     private final ClienteRepository clienteRepository;
     private final TecnicoRepository tecnicoRepository;
+    private final EntityManager entityManager;
 
     public ServicoService(
             ServicoRepository servicoRepository,
             PropostaRepository propostaRepository,
             SolicitacaoRepository solicitacaoRepository,
             ClienteRepository clienteRepository,
-            TecnicoRepository tecnicoRepository
+            TecnicoRepository tecnicoRepository,
+            EntityManager entityManager
     ) {
         this.servicoRepository = servicoRepository;
         this.propostaRepository = propostaRepository;
         this.solicitacaoRepository = solicitacaoRepository;
         this.clienteRepository = clienteRepository;
         this.tecnicoRepository = tecnicoRepository;
+        this.entityManager = entityManager;
+    }
+
+    private Servico buscarParaAlterar(Long idServico) {
+        Servico servico = buscarPorId(idServico);
+        // Atualiza também uma entidade já carregada pela autorização antes de validar o estado.
+        entityManager.refresh(servico, LockModeType.PESSIMISTIC_WRITE);
+        return servico;
     }
 
     @Transactional
+    @PreAuthorize("@acesso.executarServico(#idServico)")
+    public Servico agendar(Long idServico, LocalDateTime dataAgendada) {
+        Servico servico = buscarParaAlterar(idServico);
+        if (!"AGENDADO".equals(servico.getStatus())) {
+            throw new IllegalArgumentException("Somente atendimentos ainda não iniciados podem ser agendados");
+        }
+        if (dataAgendada == null || !dataAgendada.isAfter(LocalDateTime.now(ZoneId.of("America/Sao_Paulo")))) {
+            throw new IllegalArgumentException("Informe uma data e hora futuras, no horário de Brasília");
+        }
+        servico.setDataAgendada(dataAgendada);
+        return servicoRepository.save(servico);
+    }
+
+    @Transactional
+    @PreAuthorize("@acesso.servico(#idServico)")
+    public Servico cancelar(Long idServico) {
+        Servico servico = buscarParaAlterar(idServico);
+        if (!"AGENDADO".equals(servico.getStatus())) {
+            throw new IllegalArgumentException("Somente atendimentos ainda não iniciados podem ser cancelados");
+        }
+        Proposta proposta = propostaRepository.findById(servico.getIdProposta())
+                .orElseThrow(() -> new NoSuchElementException("Proposta não encontrada"));
+        Solicitacao solicitacao = solicitacaoRepository.findById(proposta.getIdSolicitacao())
+                .orElseThrow(() -> new NoSuchElementException("Solicitação não encontrada"));
+        servico.setStatus("CANCELADO");
+        solicitacao.setStatus("CANCELADA");
+        solicitacaoRepository.save(solicitacao);
+        return servicoRepository.save(servico);
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     @PreAuthorize("@acesso.aceitarProposta(#idProposta)")
     public Servico aceitarProposta(
             Long idProposta
@@ -59,22 +104,6 @@ public class ServicoService {
                                 )
                         );
 
-        if (!"ENVIADA".equals(
-                proposta.getStatus()
-        )) {
-            throw new IllegalArgumentException(
-                    "Esta proposta não pode ser aceita"
-            );
-        }
-
-        if (servicoRepository
-                .existsByIdProposta(idProposta)) {
-
-            throw new IllegalArgumentException(
-                    "Já existe um serviço para esta proposta"
-            );
-        }
-
         Solicitacao solicitacao =
                 solicitacaoRepository
                         .findById(
@@ -86,6 +115,17 @@ public class ServicoService {
                                 )
                         );
 
+        // O pedido é o bloqueio comum para aceitar ou enviar propostas.
+        // Refresh descarta inclusive o estado carregado antes pela autorização.
+        entityManager.refresh(solicitacao, LockModeType.PESSIMISTIC_WRITE);
+        entityManager.refresh(proposta, LockModeType.PESSIMISTIC_WRITE);
+
+        if (!"ENVIADA".equals(proposta.getStatus())) {
+            throw new IllegalArgumentException("Esta proposta não pode ser aceita");
+        }
+        if (servicoRepository.existsByIdProposta(idProposta)) {
+            throw new IllegalArgumentException("Já existe um serviço para esta proposta");
+        }
         if (!List.of("ABERTA", "EM_NEGOCIACAO").contains(solicitacao.getStatus())) {
             throw new IllegalArgumentException("Esta solicitação não aceita mais propostas");
         }
@@ -151,9 +191,10 @@ public class ServicoService {
                 "AGENDADO"
         );
 
-        return servicoRepository.save(
-                servico
-        );
+        Servico salvo = servicoRepository.save(servico);
+        entityManager.flush();
+        entityManager.refresh(salvo);
+        return salvo;
     }
 
     @PreAuthorize("@acesso.servico(#idServico)")
@@ -177,7 +218,7 @@ public class ServicoService {
     ) {
 
         Servico servico =
-                buscarPorId(idServico);
+                buscarParaAlterar(idServico);
 
         if (!"AGENDADO".equals(
                 servico.getStatus()
@@ -208,7 +249,7 @@ public class ServicoService {
     ) {
 
         Servico servico =
-                buscarPorId(idServico);
+                buscarParaAlterar(idServico);
 
         if (!"EM_ANDAMENTO".equals(
                 servico.getStatus()

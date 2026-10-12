@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 
 public record CriarSolicitacaoRequest(
 
@@ -29,9 +30,11 @@ public record CriarSolicitacaoRequest(
         String urgencia,
 
         @PositiveOrZero
+        @Digits(integer = 10, fraction = 2)
         BigDecimal orcamentoMin,
 
         @PositiveOrZero
+        @Digits(integer = 10, fraction = 2)
         BigDecimal orcamentoMax
 
 ) {

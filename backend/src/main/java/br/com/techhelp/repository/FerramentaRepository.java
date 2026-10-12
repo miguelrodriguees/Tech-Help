@@ -9,6 +9,7 @@ public interface FerramentaRepository
         extends JpaRepository<Ferramenta, Long> {
 
     boolean existsByNomeIgnoreCase(String nome);
+    boolean existsByNomeIgnoreCaseAndIdFerramentaNot(String nome, Long idFerramenta);
 
     List<Ferramenta>
     findByStatusAndQuantidadeDisponivelGreaterThanOrderByNomeAsc(

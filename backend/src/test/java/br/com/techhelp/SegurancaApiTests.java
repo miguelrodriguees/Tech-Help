@@ -27,8 +27,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest
 @Import({SecurityConfig.class, WebConfig.class, AcessoService.class, AutenticacaoService.class,
+        EstoqueAluguelService.class,
         AluguelItemService.class,
         AluguelService.class,
+        ReservaService.class,
         AvaliacaoService.class,
         CadastroService.class,
         CategoriaService.class,
@@ -57,6 +59,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class SegurancaApiTests {
     private static final String HASH = new BCryptPasswordEncoder().encode("SenhaDeTeste!");
     @Autowired MockMvc mvc;
+    @MockitoBean jakarta.persistence.EntityManager entityManager;
     @MockitoBean UsuarioRepository usuarios;
     @MockitoBean UsuarioPerfilRepository vinculos;
     @MockitoBean PerfilRepository perfis;
@@ -168,9 +171,266 @@ class SegurancaApiTests {
     }
 
     @Test
+    void edicaoDeCatalogoExigeAdminCsrfERejeitaStatusOuValorInvalido() throws Exception {
+        String ferramenta = "{\"nome\":\"Alicate\",\"quantidadeTotal\":5,\"valorDiaria\":10,\"status\":\"MANUTENCAO\"}";
+        String kit = "{\"nome\":\"Kit\",\"valorDiaria\":10,\"status\":\"INATIVO\"}";
+        for (String path : List.of("/ferramentas/10", "/kits/1")) {
+            String body = path.startsWith("/ferramentas") ? ferramenta : kit;
+            mvc.perform(put(path).with(csrf()).contentType("application/json").content(body)).andExpect(status().isUnauthorized());
+            for (long id : List.of(1L, 2L)) {
+                mvc.perform(put(path).session(login(id)).with(csrf()).contentType("application/json").content(body))
+                        .andExpect(status().isForbidden());
+            }
+            mvc.perform(put(path).session(login(4)).contentType("application/json").content(body)).andExpect(status().isForbidden());
+        }
+        var admin = login(4);
+        for (String body : List.of(kit.replace("INATIVO", "INDISPONIVEL"), kit.replace(":10", ":10.001"), kit.replace("Kit", " "))) {
+            mvc.perform(put("/kits/1").session(admin).with(csrf()).contentType("application/json").content(body)).andExpect(status().isBadRequest());
+        }
+        verify(ferramentas, never()).save(any()); verify(kits, never()).save(any());
+    }
+
+    @Test
+    void manutencaoPreservaIndisponibilidadesEBloqueiaFerramentaComprometida() throws Exception {
+        var ferramenta = new Ferramenta(); ferramenta.setIdFerramenta(10L); ferramenta.setQuantidadeTotal(5); ferramenta.setQuantidadeDisponivel(3);
+        when(ferramentas.findById(10L)).thenReturn(Optional.of(ferramenta));
+        when(ferramentas.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        String body = "{\"nome\":\" Alicate \",\"quantidadeTotal\":7,\"valorDiaria\":12.50,\"status\":\"MANUTENCAO\"}";
+        var admin = login(4);
+        when(aluguelItens.quantidadeComprometida(10L)).thenReturn(1L);
+        mvc.perform(put("/ferramentas/10").session(admin).with(csrf()).contentType("application/json").content(body)).andExpect(status().isBadRequest());
+        verify(ferramentas, never()).save(any());
+        when(aluguelItens.quantidadeComprometida(10L)).thenReturn(0L);
+        mvc.perform(put("/ferramentas/10").session(admin).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("MANUTENCAO"))
+                .andExpect(jsonPath("$.nome").value("Alicate")).andExpect(jsonPath("$.quantidadeDisponivel").value(5));
+        mvc.perform(put("/ferramentas/10").session(admin).with(csrf()).contentType("application/json").content(body.replace(":7", ":1")))
+                .andExpect(status().isBadRequest());
+        when(ferramentas.existsByNomeIgnoreCaseAndIdFerramentaNot("Alicate", 10L)).thenReturn(true);
+        mvc.perform(put("/ferramentas/10").session(admin).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isBadRequest());
+        verify(ferramentas, times(1)).save(ferramenta);
+    }
+
+    @Test
+    void kitSoPodeSerEditadoSemAluguelAtivoESemNomeDuplicado() throws Exception {
+        var kit = new Kit(); kit.setIdKit(1L); kit.setNome("Anterior");
+        when(kits.findById(1L)).thenReturn(Optional.of(kit));
+        when(kits.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        String body = "{\"nome\":\"Kit revisado\",\"valorDiaria\":15,\"status\":\"INATIVO\"}";
+        var admin = login(4);
+        when(aluguelItens.contarReservasAtivasDoKit(1L)).thenReturn(1L);
+        mvc.perform(put("/kits/1").session(admin).with(csrf()).contentType("application/json").content(body)).andExpect(status().isBadRequest());
+        assertThat(kit.getNome()).isEqualTo("Anterior");
+        when(aluguelItens.contarReservasAtivasDoKit(1L)).thenReturn(0L);
+        mvc.perform(put("/kits/1").session(admin).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("INATIVO"));
+        when(kits.existsByNomeIgnoreCaseAndIdKitNot("Kit revisado", 1L)).thenReturn(true);
+        mvc.perform(put("/kits/1").session(admin).with(csrf()).contentType("application/json").content(body)).andExpect(status().isBadRequest());
+        verify(kits, times(1)).save(kit);
+        verify(aluguelItens, never()).save(any());
+    }
+
+    @Test
+    void listagemAdministrativaDeAlugueisExigeAdminERetornaNomeSemDadosDaConta() throws Exception {
+        mvc.perform(get("/alugueis/administracao")).andExpect(status().isUnauthorized());
+        for (long id : List.of(1L, 2L)) {
+            mvc.perform(get("/alugueis/administracao").session(login(id))).andExpect(status().isForbidden());
+        }
+        verify(alugueis, never()).findAll(any(org.springframework.data.domain.Pageable.class));
+        Aluguel aluguel = new Aluguel(); aluguel.setIdAluguel(600L); aluguel.setIdUsuario(1L);
+        when(alugueis.findAll(any(org.springframework.data.domain.Pageable.class))).thenAnswer(inv ->
+                new org.springframework.data.domain.PageImpl<>(List.of(aluguel), inv.getArgument(0), 1));
+        when(usuarios.findAllById(List.of(1L))).thenReturn(List.of(contas.get(1L)));
+        var admin = login(4);
+        mvc.perform(get("/alugueis/administracao").session(admin))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.content[0].nomeUsuario").value("Usuario 1"))
+                .andExpect(jsonPath("$.content[0].aluguel.idAluguel").value(600))
+                .andExpect(jsonPath("$.content[0].senhaHash").doesNotExist())
+                .andExpect(jsonPath("$.content[0].email").doesNotExist())
+                .andExpect(jsonPath("$.totalPages").value(1));
+        mvc.perform(get("/alugueis/administracao").param("pagina", "-1").session(admin))
+                .andExpect(status().isBadRequest());
+        verify(alugueis).findAll(org.springframework.data.domain.PageRequest.of(0, 20,
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "idAluguel")));
+    }
+
+    @Test
+    void adminRegistraRetiradaEDevolucaoSemRepetirTransicoes() throws Exception {
+        Aluguel aluguel = new Aluguel(); aluguel.setIdAluguel(600L); aluguel.setIdUsuario(1L);
+        when(alugueis.findById(600L)).thenReturn(Optional.of(aluguel));
+        when(alugueis.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(aluguelItens.countByIdAluguel(600L)).thenReturn(1L);
+        when(aluguelItens.findByIdAluguelOrderByIdAluguelItemAsc(600L)).thenReturn(List.of());
+        var admin = login(4);
+        mvc.perform(post("/alugueis/600/retirar").session(admin)).andExpect(status().isForbidden());
+        mvc.perform(post("/alugueis/600/devolver").session(admin).with(csrf())).andExpect(status().isBadRequest());
+        mvc.perform(post("/alugueis/600/retirar").session(admin).with(csrf()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("RETIRADO"))
+                .andExpect(jsonPath("$.dataRetirada").isNotEmpty());
+        var retirada = aluguel.getDataRetirada();
+        mvc.perform(post("/alugueis/600/retirar").session(admin).with(csrf())).andExpect(status().isBadRequest());
+        assertThat(aluguel.getDataRetirada()).isEqualTo(retirada);
+        mvc.perform(post("/alugueis/600/devolver").session(admin)).andExpect(status().isForbidden());
+        mvc.perform(post("/alugueis/600/devolver").session(admin).with(csrf()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("DEVOLVIDO"))
+                .andExpect(jsonPath("$.dataDevolucao").isNotEmpty());
+        var devolucao = aluguel.getDataDevolucao();
+        mvc.perform(post("/alugueis/600/devolver").session(admin).with(csrf())).andExpect(status().isBadRequest());
+        assertThat(aluguel.getDataDevolucao()).isEqualTo(devolucao);
+        verify(alugueis, times(2)).save(aluguel);
+    }
+
+    @Test
+    void resumoPublicoDoTecnicoExpoeSomenteIdentificadorENome() throws Exception {
+        contas.get(2L).setCpf("12345678901");
+        contas.get(2L).setTelefone("11999999999");
+        Tecnico tecnico = new Tecnico(); tecnico.setIdTecnico(20L); tecnico.setIdUsuario(2L);
+        when(tecnicos.findAllById(List.of(20L, 999L))).thenReturn(List.of(tecnico));
+        when(usuarios.findAllById(List.of(2L))).thenReturn(List.of(contas.get(2L)));
+        mvc.perform(get("/tecnicos/resumos").param("ids", "20,20,999"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[{\"idTecnico\":20,\"nome\":\"Usuario 2\"}]"))
+                .andExpect(jsonPath("$[0].length()").value(2))
+                .andExpect(jsonPath("$[0].cpf").doesNotExist())
+                .andExpect(jsonPath("$[0].email").doesNotExist())
+                .andExpect(jsonPath("$[0].telefone").doesNotExist())
+                .andExpect(jsonPath("$[0].senhaHash").doesNotExist())
+                .andExpect(jsonPath("$[0].idUsuario").doesNotExist());
+        verify(tecnicos).findAllById(List.of(20L, 999L));
+        verify(usuarios).findAllById(List.of(2L));
+        contas.get(2L).setStatus("BLOQUEADO");
+        mvc.perform(get("/tecnicos/resumos").param("ids", "20,999"))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+    }
+
+    @Test
+    void consultaDeNomesRejeitaIdsInvalidosELotesExcessivos() throws Exception {
+        for (String ids : List.of("0", "-1", "abc", "", String.join(",", Collections.nCopies(51, "20")))) {
+            mvc.perform(get("/tecnicos/resumos").param("ids", ids)).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/tecnicos/resumos")).andExpect(status().isBadRequest());
+        verify(tecnicos, never()).findAllById(any());
+        verify(usuarios, never()).findAllById(any());
+    }
+
+    @Test
+    void tecnicoAgendaEReagendaMasClienteNaoAlteraData() throws Exception {
+        var tecnico = login(2);
+        for (String data : List.of("2099-05-20T14:30:00", "2099-05-21T15:00:00")) {
+            mvc.perform(post("/servicos/300/agendar").session(tecnico).with(csrf())
+                    .contentType("application/json").content("{\"dataAgendada\":\"" + data + "\"}"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.dataAgendada").value(data));
+        }
+        mvc.perform(post("/servicos/300/agendar").session(login(1)).with(csrf())
+                .contentType("application/json").content("{\"dataAgendada\":\"2099-06-01T12:00:00\"}"))
+                .andExpect(status().isForbidden());
+        assertThat(servico.getDataAgendada()).isEqualTo(java.time.LocalDateTime.parse("2099-05-21T15:00:00"));
+        verify(servicos, times(2)).save(any());
+    }
+
+    @Test
+    void agendamentoRejeitaDatasInvalidasPassadasEEstadosEncerrados() throws Exception {
+        var tecnico = login(2);
+        for (String body : List.of("{}", "{\"dataAgendada\":\"invalida\"}",
+                "{\"dataAgendada\":\"2000-01-01T12:00:00\"}")) {
+            mvc.perform(post("/servicos/300/agendar").session(tecnico).with(csrf())
+                    .contentType("application/json").content(body)).andExpect(status().isBadRequest());
+        }
+        for (String status : List.of("EM_ANDAMENTO", "CONCLUIDO", "CANCELADO")) {
+            servico.setStatus(status);
+            mvc.perform(post("/servicos/300/agendar").session(tecnico).with(csrf())
+                    .contentType("application/json").content("{\"dataAgendada\":\"2099-05-20T14:30:00\"}"))
+                    .andExpect(status().isBadRequest());
+            mvc.perform(post("/servicos/300/cancelar").session(tecnico).with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+        verify(servicos, never()).save(any());
+        verify(solicitacoes, never()).save(any());
+    }
+
+    @Test
+    void participantesCancelamAntesDoInicioSemReabrirPedidoOuPropostas() throws Exception {
+        for (long id : List.of(1L, 2L)) {
+            servico.setStatus("AGENDADO"); solicitacao.setStatus("CONTRATADA");
+            mvc.perform(post("/servicos/300/cancelar").session(login(id)).with(csrf()))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CANCELADO"));
+            assertThat(solicitacao.getStatus()).isEqualTo("CANCELADA");
+            assertThat(servico.getDataInicio()).isNull();
+            assertThat(servico.getDataConclusao()).isNull();
+        }
+        var tecnico = login(2);
+        for (String action : List.of("iniciar", "concluir", "cancelar")) {
+            mvc.perform(post("/servicos/300/" + action).session(tecnico).with(csrf()))
+                    .andExpect(status().isBadRequest());
+        }
+        mvc.perform(post("/avaliacoes/servico/300/cliente").session(login(1)).with(csrf())
+                .contentType("application/json").content("{\"nota\":5}"))
+                .andExpect(status().isBadRequest());
+        verify(servicos, times(2)).save(any());
+        verify(solicitacoes, times(2)).save(any());
+        verify(propostas, never()).save(any());
+    }
+
+    @Test
+    void agendarECancelarExigemSessaoCsrfEParticipacao() throws Exception {
+        var tecnico = login(2);
+        var outro = login(3);
+        for (String action : List.of("agendar", "cancelar")) {
+            String path = "/servicos/300/" + action;
+            String body = "{\"dataAgendada\":\"2099-05-20T14:30:00\"}";
+            mvc.perform(post(path).with(csrf()).contentType("application/json").content(body))
+                    .andExpect(status().isUnauthorized());
+            mvc.perform(post(path).session(tecnico).contentType("application/json").content(body))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post(path).session(outro).with(csrf()).contentType("application/json").content(body))
+                    .andExpect(status().isForbidden());
+        }
+        verify(servicos, never()).save(any());
+    }
+
+    @Test
+    void cancelamentoConfereEstadoAtualizadoDepoisDeObterBloqueio() throws Exception {
+        doAnswer(inv -> {
+            ((Servico) inv.getArgument(0)).setStatus("EM_ANDAMENTO"); return null;
+        }).when(entityManager).refresh(any(Servico.class), eq(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE));
+        mvc.perform(post("/servicos/300/cancelar").session(login(1)).with(csrf()))
+                .andExpect(status().isBadRequest());
+        verify(servicos, never()).save(any());
+        verify(solicitacoes, never()).save(any());
+    }
+
+    @Test
     void catalogoPublicoContinuaDisponivel() throws Exception {
         mvc.perform(get("/categorias")).andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].nome").value("Hardware"));
+    }
+
+    @Test
+    void cadastroRejeitaNomeETelefoneMaioresQueAsColunas() throws Exception {
+        for (String perfil : List.of("cliente", "tecnico")) {
+            for (String[] campos : List.of(new String[]{"N".repeat(121), "11999999999"},
+                    new String[]{"Nome válido", "1".repeat(21)})) {
+                mvc.perform(post("/cadastro/" + perfil).with(csrf()).contentType("application/json")
+                        .content("""
+                        {"nome":"%s","email":"teste@example.invalid","senha":"SenhaTeste123",
+                         "telefone":"%s","cpf":"12345678901","anosExperiencia":1}
+                        """.formatted(campos[0], campos[1])))
+                        .andExpect(status().isBadRequest());
+            }
+        }
+        verify(usuarios, never()).save(any());
+    }
+
+    @Test
+    void propostaRejeitaValorComPrecisaoIncompativel() throws Exception {
+        var session = login(2);
+        for (String valor : List.of("100.001", "10000000000.00")) {
+            mvc.perform(post("/propostas").session(session).with(csrf()).contentType("application/json")
+                    .content("{\"idSolicitacao\":100,\"idTecnico\":20,\"valor\":" + valor + "}"))
+                    .andExpect(status().isBadRequest());
+        }
+        verify(propostas, never()).save(any());
     }
 
     @Test
@@ -333,6 +593,124 @@ class SegurancaApiTests {
         mvc.perform(post("/servicos/300/concluir").session(login(2)).with(csrf()))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CONCLUIDO"));
         assertThat(solicitacao.getStatus()).isEqualTo("CONCLUIDA");
+    }
+
+    @Test
+    void listasDeServicosEDetalhesSaoRestritosAosParticipantes() throws Exception {
+        when(servicos.findByIdClienteOrderByDataCadastroDesc(10L)).thenReturn(List.of(servico));
+        when(servicos.findByIdTecnicoOrderByDataCadastroDesc(20L)).thenReturn(List.of(servico));
+        var cliente = login(1);
+        var tecnico = login(2);
+        var outro = login(3);
+        mvc.perform(get("/servicos/cliente/10").session(cliente)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].idServico").value(300));
+        mvc.perform(get("/servicos/tecnico/20").session(tecnico)).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].idServico").value(300));
+        mvc.perform(get("/servicos/300").session(cliente)).andExpect(status().isOk());
+        mvc.perform(get("/servicos/300").session(tecnico)).andExpect(status().isOk());
+        for (String path : List.of("/servicos/cliente/10", "/servicos/tecnico/20", "/servicos/300")) {
+            mvc.perform(get(path)).andExpect(status().isUnauthorized());
+            mvc.perform(get(path).session(outro)).andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/servicos/cliente/10").session(tecnico)).andExpect(status().isForbidden());
+        mvc.perform(get("/servicos/tecnico/20").session(cliente)).andExpect(status().isForbidden());
+        verify(servicos, times(1)).findByIdClienteOrderByDataCadastroDesc(10L);
+        verify(servicos, times(1)).findByIdTecnicoOrderByDataCadastroDesc(20L);
+    }
+
+    @Test
+    void outroTecnicoNaoConsultaNemExecutaServicoAlheio() throws Exception {
+        papeis.put(3L, "TECNICO");
+        Tecnico outro = new Tecnico(); outro.setIdTecnico(31L); outro.setIdUsuario(3L);
+        when(tecnicos.findById(31L)).thenReturn(Optional.of(outro));
+        when(tecnicos.findByIdUsuario(3L)).thenReturn(Optional.of(outro));
+        var session = login(3);
+        mvc.perform(get("/servicos/300").session(session)).andExpect(status().isForbidden());
+        mvc.perform(get("/servicos/tecnico/20").session(session)).andExpect(status().isForbidden());
+        for (String action : List.of("iniciar", "concluir")) {
+            mvc.perform(post("/servicos/300/" + action).session(session).with(csrf()))
+                    .andExpect(status().isForbidden());
+        }
+        verify(servicos, never()).save(any());
+        verify(solicitacoes, never()).save(any());
+    }
+
+    @Test
+    void execucaoExigeCsrfRespeitaOrdemEPreservaDatasAoRepetir() throws Exception {
+        var tecnico = login(2);
+        mvc.perform(post("/servicos/300/iniciar").session(tecnico)).andExpect(status().isForbidden());
+        mvc.perform(post("/servicos/300/concluir").session(tecnico).with(csrf())).andExpect(status().isBadRequest());
+        assertThat(servico.getDataConclusao()).isNull();
+        mvc.perform(post("/servicos/300/iniciar").session(tecnico).with(csrf())).andExpect(status().isOk());
+        var inicio = servico.getDataInicio();
+        assertThat(inicio).isNotNull();
+        mvc.perform(post("/servicos/300/iniciar").session(tecnico).with(csrf())).andExpect(status().isBadRequest());
+        assertThat(servico.getDataInicio()).isEqualTo(inicio);
+        mvc.perform(post("/servicos/300/concluir").session(login(1)).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(post("/servicos/300/concluir").session(tecnico).with(csrf())).andExpect(status().isOk());
+        var conclusao = servico.getDataConclusao();
+        assertThat(conclusao).isNotNull();
+        assertThat(solicitacao.getStatus()).isEqualTo("CONCLUIDA");
+        mvc.perform(post("/servicos/300/concluir").session(tecnico).with(csrf())).andExpect(status().isBadRequest());
+        mvc.perform(post("/servicos/300/iniciar").session(tecnico).with(csrf())).andExpect(status().isBadRequest());
+        assertThat(servico.getDataConclusao()).isEqualTo(conclusao);
+        verify(servicos, times(2)).save(any());
+        verify(solicitacoes, times(1)).save(any());
+    }
+
+    @Test
+    void avaliacaoPeloClienteDerivaParticipantesEImpedeRepeticao() throws Exception {
+        servico.setStatus("CONCLUIDO");
+        var cliente = login(1);
+        mvc.perform(post("/avaliacoes/servico/300/cliente").session(cliente).with(csrf())
+                .contentType("application/json").content("""
+                {"nota":5,"comentario":"  Resolvido!  ","idAvaliador":3,"idAvaliado":4}
+                """)).andExpect(status().isCreated())
+                .andExpect(jsonPath("$.idAvaliador").value(1))
+                .andExpect(jsonPath("$.idAvaliado").value(2))
+                .andExpect(jsonPath("$.comentario").value("Resolvido!"));
+        when(avaliacoes.existsByIdServicoAndIdAvaliadorAndIdAvaliado(300L, 1L, 2L)).thenReturn(true);
+        mvc.perform(post("/avaliacoes/servico/300/cliente").session(cliente).with(csrf())
+                .contentType("application/json").content("{\"nota\":4}"))
+                .andExpect(status().isBadRequest());
+        verify(avaliacoes, times(1)).save(any());
+    }
+
+    @Test
+    void avaliacaoDoAtendimentoExigeClienteConclusaoNotaValidaECsrf() throws Exception {
+        String path = "/avaliacoes/servico/300/cliente";
+        String body = "{\"nota\":5}";
+        mvc.perform(post(path).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isUnauthorized());
+        for (long id : List.of(2L, 3L, 4L)) {
+            mvc.perform(post(path).session(login(id)).with(csrf()).contentType("application/json").content(body))
+                    .andExpect(status().isForbidden());
+        }
+        var cliente = login(1);
+        mvc.perform(post(path).session(cliente).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(path).session(cliente).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isBadRequest());
+        servico.setStatus("CONCLUIDO");
+        for (String invalid : List.of("{}", "{\"nota\":0}", "{\"nota\":6}", "{\"nota\":2.5}",
+                "{\"nota\":5,\"comentario\":\"" + "a".repeat(3001) + "\"}")) {
+            mvc.perform(post(path).session(cliente).with(csrf()).contentType("application/json").content(invalid))
+                    .andExpect(status().isBadRequest());
+        }
+        verify(avaliacoes, never()).save(any());
+    }
+
+    @Test
+    void participantesConsultamAvaliacaoDoServicoMasTerceiroNao() throws Exception {
+        Avaliacao avaliacao = new Avaliacao(); avaliacao.setIdServico(300L);
+        avaliacao.setIdAvaliador(1L); avaliacao.setIdAvaliado(2L); avaliacao.setNota((byte) 5);
+        avaliacao.setComentario("Resolvido");
+        when(avaliacoes.findByIdServicoOrderByDataAvaliacaoDesc(300L)).thenReturn(List.of(avaliacao));
+        for (long id : List.of(1L, 2L)) {
+            mvc.perform(get("/avaliacoes/servico/300").session(login(id))).andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].nota").value(5)).andExpect(jsonPath("$[0].comentario").value("Resolvido"));
+        }
+        mvc.perform(get("/avaliacoes/servico/300").session(login(3))).andExpect(status().isForbidden());
     }
 
     @Test
@@ -499,5 +877,70 @@ class SegurancaApiTests {
         }
         verify(alugueis, never()).save(any());
         verify(pagamentos, never()).save(any());
+    }
+    @Test
+    void catalogoSoAceitaEscritaDeAdministradorComCsrf() throws Exception {
+        String body = "{\"nome\":\"Alicate\",\"quantidadeTotal\":3,\"valorDiaria\":10}";
+        for (long id : new long[]{1, 2}) {
+            var session = login(id);
+            mvc.perform(post("/ferramentas").session(session).with(csrf()).contentType("application/json").content(body))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/kits").session(session).with(csrf()).contentType("application/json").content(body))
+                    .andExpect(status().isForbidden());
+            mvc.perform(post("/kits/1/ferramentas").session(session).with(csrf()).contentType("application/json")
+                    .content("{\"idFerramenta\":10,\"quantidade\":1}")).andExpect(status().isForbidden());
+            mvc.perform(delete("/kits/1/ferramentas/10").session(session).with(csrf())).andExpect(status().isForbidden());
+        }
+        var admin = login(4);
+        mvc.perform(post("/ferramentas").session(admin).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(delete("/kits/1/ferramentas/10").session(admin)).andExpect(status().isForbidden());
+        verify(ferramentas, never()).save(any());
+        verify(kits, never()).save(any());
+        verify(kitFerramentas, never()).save(any());
+        verify(kitFerramentas, never()).deleteById(any());
+        when(ferramentas.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(kits.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        mvc.perform(post("/ferramentas").session(admin).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.quantidadeTotal").value(3));
+        mvc.perform(post("/kits").session(admin).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.nome").value("Alicate"));
+    }
+
+    @Test
+    void administradorMontaKitMasNaoAlteraComposicaoComReservaAtiva() throws Exception {
+        Kit kit = new Kit(); kit.setIdKit(1L);
+        Ferramenta ferramenta = new Ferramenta(); ferramenta.setIdFerramenta(10L); ferramenta.setQuantidadeTotal(3);
+        when(kits.existsById(1L)).thenReturn(true);
+        when(kits.findById(1L)).thenReturn(Optional.of(kit));
+        when(ferramentas.findById(10L)).thenReturn(Optional.of(ferramenta));
+        when(kitFerramentas.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        var admin = login(4);
+        mvc.perform(post("/kits/1/ferramentas").session(admin).with(csrf()).contentType("application/json")
+                .content("{\"idFerramenta\":10,\"quantidade\":2}"))
+                .andExpect(status().isCreated()).andExpect(jsonPath("$.quantidade").value(2));
+        when(kitFerramentas.existsById(any(KitFerramentaId.class))).thenReturn(true);
+        mvc.perform(delete("/kits/1/ferramentas/10").session(admin).with(csrf())).andExpect(status().isNoContent());
+        when(aluguelItens.contarReservasAtivasDoKit(1L)).thenReturn(1L);
+        mvc.perform(delete("/kits/1/ferramentas/10").session(admin).with(csrf())).andExpect(status().isBadRequest());
+        verify(kitFerramentas, times(1)).deleteById(any());
+    }
+    @Test
+    void reservaExigeDonoCsrfDatasFuturasEQuantidadePositiva() throws Exception {
+        String body = "{\"idUsuario\":1,\"idKit\":1,\"quantidade\":1,\"dataPrevistaRetirada\":\"2099-01-01T10:00:00\",\"dataPrevistaDevolucao\":\"2099-01-02T10:00:00\"}";
+        mvc.perform(post("/alugueis/reservar").with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(post("/alugueis/reservar").session(login(3)).with(csrf()).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        var cliente = login(1);
+        mvc.perform(post("/alugueis/reservar").session(cliente).contentType("application/json").content(body))
+                .andExpect(status().isForbidden());
+        mvc.perform(post("/alugueis/reservar").session(cliente).with(csrf()).contentType("application/json")
+                .content(body.replace("\"quantidade\":1", "\"quantidade\":0"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/alugueis/reservar").session(cliente).with(csrf()).contentType("application/json")
+                .content(body.replace("2099-01-01", "2000-01-01"))).andExpect(status().isBadRequest());
+        mvc.perform(post("/alugueis/reservar").session(cliente).with(csrf()).contentType("application/json")
+                .content(body.replace("2099-01-02", "2098-01-02"))).andExpect(status().isBadRequest());
+        verify(alugueis, never()).save(any());
     }
 }

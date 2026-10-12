@@ -1,0 +1,10 @@
+.th-catalog { max-width: 1100px; }
+.th-catalog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2rem; margin-block: 2rem; }
+.th-catalog fieldset { border: 0; padding: 0; margin: 0; min-width: 0; display: grid; gap: 1rem; }
+.th-catalog-list { list-style: none; padding: 0; }
+.th-catalog-list li { padding: 1rem 0; border-bottom: 1px solid #444; overflow-wrap: anywhere; }
+.th-catalog-list .th-link { margin-left: 1rem; }
+.th-catalog .th-field { width: 100%; box-sizing: border-box; }
+.th-catalog-edit { padding: 20px; margin-block: 20px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
+.th-catalog-edit .th-button { max-width: 100%; white-space: normal; }
+@media (max-width: 720px) { .th-catalog-grid { grid-template-columns: 1fr; } }

@@ -3,6 +3,12 @@ import { ArrowRight, CircleHelp, Menu, Pause, Play, Wrench, X } from 'lucide-rea
 import { api, errorMessage, getSession, postProtected, statusOf, type Session, type ServiceRequest } from '../services/api';
 import AuthDialog from '../features/auth/AuthDialog';
 import MyRequests from '../features/solicitacao/MyRequests';
+import Rentals from '../features/aluguel/RentalPage';
+import AdminCatalog from '../features/catalogo/AdminCatalog';
+import AdminRentals from '../features/aluguel/AdminRentals';
+import { isAdmin } from '../features/catalogo/catalog';
+import MyServices from '../features/servicos/MyServices';
+import { serviceViews } from '../features/servicos/services';
 import TechnicianBoard from '../features/propostas/TechnicianBoard';
 import { requestPayload } from '../features/solicitacao/publication';
 import type { Categoria } from '../types/Categoria';
@@ -11,7 +17,7 @@ import { areaFor, draftKey, emptyDraft, parseDraft, type Draft } from '../featur
 import Landing from '../features/home/Landing';
 
 type Catalog = { status: 'loading' | 'ready' | 'error'; categories: Categoria[] };
-type Screen = 'home' | 'categories' | 'unsure' | 'request' | 'requests' | 'published' | 'technician';
+type Screen = 'home' | 'categories' | 'unsure' | 'request' | 'requests' | 'published' | 'technician' | 'services' | 'adminCatalog' | 'adminRentals' | 'rentals';
 const navigation = [['servicos', 'Serviços'], ['como-funciona', 'Como funciona'], ['ferramentas', 'Aluguel de ferramentas'], ['profissionais', 'Sou profissional']];
 function loadDraft(): Draft {
   try { return parseDraft(sessionStorage.getItem(draftKey)); }
@@ -29,6 +35,7 @@ export default function Home() {
   const [message, setMessage] = useState({ title: '', body: '' });
   const dialog = useRef<HTMLDialogElement>(null);
   const main = useRef<HTMLElement>(null);
+  const header = useRef<HTMLElement>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [sessionLoading, setSessionLoading] = useState(true);
   const [sessionError, setSessionError] = useState('');
@@ -39,6 +46,16 @@ export default function Home() {
   const [uncertain, setUncertain] = useState(false);
   const [published, setPublished] = useState<ServiceRequest | null>(null);
   const operation = useRef(false);
+
+  useEffect(() => {
+    const element = header.current;
+    if (!element) return;
+    const updateHeight = () => element.parentElement?.style.setProperty('--header-height', `${element.getBoundingClientRect().height}px`);
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -118,7 +135,7 @@ export default function Home() {
   function accountControls() {
     if (sessionLoading) return <span role="status">Verificando conta…</span>;
     if (!session) return <button className="th-button secondary" onClick={() => { setAuthProfessional(false); setAuthOpen(true); }}>Entrar</button>;
-    return <><span className="th-account-name" title={session.nome}>Olá, {session.nome}</span>{session.idCliente && session.perfis.includes('CLIENTE') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('requests')}>Meus pedidos</button>}{session.idTecnico && session.perfis.includes('TECNICO') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('technician')}>Área do técnico</button>}<button disabled={busy} className="th-button secondary" onClick={logout}>Sair</button></>;
+    return <><span className="th-account-name" title={session.nome}>Olá, {session.nome}</span>{session.idCliente && session.perfis.includes('CLIENTE') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('requests')}>Meus pedidos</button>}{session.idTecnico && session.perfis.includes('TECNICO') && <button className="th-nav-link" disabled={busy} onClick={() => navigate('technician')}>Área do técnico</button>}<button className="th-nav-link" disabled={busy || !serviceViews(session).length} onClick={() => navigate('services')}>Meus serviços</button>{isAdmin(session) && <><button className="th-nav-link" disabled={busy} onClick={() => navigate('adminCatalog')}>Administrar catálogo</button><button className="th-nav-link" disabled={busy} onClick={() => navigate('adminRentals')}>Administrar aluguéis</button></>}<button className="th-nav-link" disabled={busy} onClick={() => navigate('rentals')}>Meus aluguéis</button><button disabled={busy} className="th-button secondary" onClick={logout}>Sair</button></>;
   }
   function navLinks() { return navigation.map(([id, label]) => <button key={id} className={`th-nav-link${id === 'ferramentas' ? ' th-nav-rental' : ''}`} onClick={() => sectionLink(id)}>{id === 'ferramentas' && <Wrench size={15} />}{label}</button>); }
   function catalogOptions() {
@@ -128,20 +145,24 @@ export default function Home() {
     return <div className="th-options">{catalog.categories.filter(c => areaFor(c.nome)).map(c => <button className="th-option" key={c.idCategoria} onClick={() => choose(c)}><span>{c.nome}<small>{c.descricao}</small></span><ArrowRight size={18} /></button>)}<button className="th-option" onClick={() => navigate('unsure')}><CircleHelp size={22} />Não sei por onde começar</button></div>;
   }
 
-  return <div className={`techhelp-site${paused ? ' th-paused th-motion-paused' : ''}`}>
+  return <div className={`techhelp-site${session ? " th-authenticated" : ""}${paused ? ' th-paused th-motion-paused' : ''}`}>
     <a className="th-skip" href="#conteudo">Ir para o conteúdo</a>
-    <header className="th-header"><div className="th-inner th-header-inner"><button className="th-brand" onClick={() => navigate('home')} aria-label="TechHelp início"><svg className="th-mark" viewBox="0 0 26 26" aria-hidden="true"><rect className="th-mark-body" x="1" y="1" width="24" height="24" rx="7" strokeWidth="1.5" /><path className="th-mark-line" d="M6.5 18 12 12.5 15.5 16" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /><circle className="th-mark-signal" cx="18.5" cy="8.5" r="3" /></svg>TechHelp</button>
-      <nav className="th-nav" aria-label="Navegação principal">{navLinks()}{accountControls()}</nav><button className="th-button secondary th-menu-toggle" aria-expanded={menu} aria-controls="menu-mobile" onClick={() => setMenu(!menu)}>{menu ? <X size={18} /> : <Menu size={18} />}{menu ? 'Fechar' : 'Menu'}</button>
-    </div></header>
+    <header className="th-header" ref={header}><div className="th-inner th-header-inner"><button className="th-brand" onClick={() => navigate('home')} aria-label="TechHelp início"><svg className="th-mark" viewBox="0 0 26 26" aria-hidden="true"><rect className="th-mark-body" x="1" y="1" width="24" height="24" rx="7" strokeWidth="1.5" /><path className="th-mark-line" d="M6.5 18 12 12.5 15.5 16" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" /><circle className="th-mark-signal" cx="18.5" cy="8.5" r="3" /></svg>TechHelp</button>
+      <nav className="th-nav" aria-label="Navegação principal">{navLinks()}{!session && accountControls()}</nav><button className="th-button secondary th-menu-toggle" aria-expanded={menu} aria-controls="menu-mobile" onClick={() => setMenu(!menu)}>{menu ? <X size={18} /> : <Menu size={18} />}{menu ? 'Fechar' : 'Menu'}</button>
+    </div>{session && <div className="th-account-bar"><nav className="th-inner th-account-nav" aria-label="Minha conta">{accountControls()}</nav></div>}</header>
     <nav id="menu-mobile" className="th-mobile-nav" aria-label="Menu mobile" hidden={!menu}><div className="th-inner">{navLinks()}{accountControls()}</div></nav>
     <main id="conteudo" className={screen === 'home' ? undefined : 'th-app-content'} ref={main} tabIndex={-1}>
       {sessionError && <p role="status" className="th-note">{sessionError}</p>}
       {screen === 'request' && <RequestAssistant draft={draft} onChange={updateDraft} saved={saved} busy={busy || sessionLoading} blocked={uncertain} publishError={publishError} onCheckRequests={() => navigate('requests')} onHome={() => navigate('home')} onCategory={() => navigate('categories')} onPublish={publish} />}
+      {screen === 'rentals' && <Rentals key={session?.idUsuario ?? 'visitor'} session={session} onBack={() => navigate('home')} onLogin={() => { setAuthProfessional(false); setAuthOpen(true); }} />}
+      {screen === 'adminCatalog' && session && <AdminCatalog key={session.idUsuario} session={session} onBack={() => navigate('home')} />}
+      {screen === 'adminRentals' && session && <AdminRentals key={session.idUsuario} session={session} onBack={() => navigate('home')} />}
+      {screen === 'services' && session && <MyServices key={session.idUsuario} session={session} onBack={() => navigate('home')} />}
       {screen === 'technician' && session?.idTecnico && <TechnicianBoard key={session.idTecnico} idTecnico={session.idTecnico} onBack={() => navigate('home')} />}
       {screen === 'requests' && session?.idCliente && <MyRequests key={session.idCliente} idCliente={session.idCliente} uncertain={uncertain} onBack={() => { setUncertain(false); setPublishError(''); navigate(draft.area ? 'request' : 'home'); }} />}
       {screen === 'published' && published && <section className="th-wizard th-flow-content" role="status"><h1 className="th-form-title">Solicitação publicada!</h1><p>Pedido #{published.idSolicitacao}: {published.titulo}</p><p>Seu pedido foi recebido. Consulte Meus pedidos para comparar as propostas quando chegarem.</p><div className="th-actions"><button className="th-button" onClick={() => navigate('requests')}>Ver meus pedidos</button><button className="th-button secondary" onClick={() => navigate('categories')}>Criar outro pedido</button></div></section>}
       {(screen === 'categories' || screen === 'unsure') && <section className="th-wizard"><button className="th-link" onClick={() => navigate('home')}>← Voltar à Home</button><div className="th-flow-content"><h1 className="th-form-title">{screen === 'unsure' ? 'Conte o que está acontecendo.' : 'Qual área parece mais próxima?'}</h1><p className="th-sub">Não precisa descobrir a causa. As jornadas disponíveis são Hardware, Redes e Software.</p>{screen === 'unsure' && <label className="th-label">Sua descrição<textarea className="th-field" maxLength={3000} value={draft.details} onChange={e => updateDraft({ ...draft, details: e.target.value })} placeholder="Ex.: meu notebook liga, mas a tela fica preta" /></label>}{catalogOptions()}</div></section>}
-      {screen === 'home' && <Landing catalog={catalog} paused={paused} hasDraft={Boolean(draft.area || draft.details.trim())} onChoose={choose} onRetry={retry} onUnsure={() => navigate('unsure')} onStart={() => navigate('categories')} onResume={resume} onRental={() => notify('Aluguel de ferramentas', 'As ferramentas serão do próprio TechHelp. O catálogo, as reservas e a entrega ainda estão em preparação.')} onProfessional={() => { if (session?.idTecnico && session.perfis.includes('TECNICO')) navigate('technician'); else { setAuthProfessional(true); setAuthOpen(true); } }} />}
+      {screen === 'home' && <Landing catalog={catalog} paused={paused} hasDraft={Boolean(draft.area || draft.details.trim())} onChoose={choose} onRetry={retry} onUnsure={() => navigate('unsure')} onStart={() => navigate('categories')} onResume={resume} onRental={() => navigate('rentals')} onProfessional={() => { if (session?.idTecnico && session.perfis.includes('TECNICO')) navigate('technician'); else { setAuthProfessional(true); setAuthOpen(true); } }} />}
     </main>
     <footer className="th-footer"><div className="th-inner th-footer-inner"><div className="th-footer-brand"><strong>TechHelp</strong><span>Serviços de TI e aluguel de ferramentas técnicas.</span><span>Projeto Integrador de Software, SENAC Taboão da Serra.</span></div><div className="th-footer-links"><button onClick={() => sectionLink('como-funciona')}>Como funciona</button><button onClick={() => sectionLink('ferramentas')}>Aluguel de ferramentas</button><button onClick={() => sectionLink('profissionais')}>Sou profissional</button><button aria-pressed={paused} onClick={() => setPaused(!paused)}>{paused ? <Play size={14} /> : <Pause size={14} />}{paused ? 'Retomar movimento' : 'Pausar movimento'}</button></div></div></footer>
     <dialog className="th-dialog" ref={dialog} aria-labelledby="dialog-title" onClick={e => { if (e.target === e.currentTarget) dialog.current?.close(); }}><h2 id="dialog-title">{message.title}</h2><p>{message.body}</p><button className="th-button" onClick={() => dialog.current?.close()}>Entendi</button></dialog>
