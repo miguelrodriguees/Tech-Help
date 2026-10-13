@@ -1,0 +1,27 @@
+[Unit]
+Description=Tech Help - Spring Boot
+Wants=network-online.target
+After=network-online.target mariadb.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=techhelp
+Group=techhelp
+WorkingDirectory=/opt/techhelp
+EnvironmentFile=/etc/techhelp/techhelp.env
+ExecStart=/usr/bin/java -Xms128m -Xmx512m -jar /opt/techhelp/techhelp.jar --spring.profiles.active=hospedagem
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=60
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

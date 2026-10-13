@@ -1,5 +1,59 @@
 # Contexto e continuidade do Tech Help
 
+## Execução automática e atualização preparadas — 12/10/2026
+
+Criados deploy/linux/techhelp.service, techhelp.env.example e .gitignore para configurações preenchidas. Modelo systemd roda como usuário techhelp sem sudo/login, lê EnvironmentFile privado, usa perfil hospedagem e reinicia por falha com limite de tentativas. Não instalado nem validado com systemd no Windows; confirmar caminhos/Java/Ubuntu, permissões, proxy e comportamento no servidor antes da publicação.
+
+Criados preparar-hospedagem.cmd (reutiliza empacotamento e imprime SHA-256) e OPERACAO_SERVIDOR.md (CMD para pacote/SSH, Linux remoto para instalação, logs, atualização e volta ao JAR anterior). Procedimento mantém cópia da versão imediatamente anterior e exige sucesso de cada comando antes do seguinte. Retorno do JAR não desfaz dados/esquema/configuração; reinício encerra sessões em memória.
+
+Empacotamento executado: primeira tentativa bloqueada pelo sandbox com spawn EPERM no Vite; execução liberada passou build React/TypeScript e clean package Maven, com testes explicitamente pulados. Script completo terminou com hash SHA-256. Não houve nova suíte de testes, conexão de banco, transferência, instalação remota ou reinício de processos locais. JAR inclui novo perfil de hospedagem. Alterações locais, sem novo commit/push. Próxima etapa independente do provedor: revisar checkpoint para Git; instalação/publicação dependem de acesso a servidor. Modelo recomendado: Sol — raciocínio baixo para checkpoint, médio para configuração remota.
+
+## Perfil de hospedagem preparado e testado — 12/10/2026
+
+Usuário autorizou preparar a configuração independente do provedor enquanto aguarda atendimento da Oracle. Criado application-hospedagem.properties com TECHHELP_DB_URL, TECHHELP_DB_USERNAME e TECHHELP_DB_PASSWORD obrigatórias, sem fallback local. Preservados MariaDB, ddl-auto=validate e application.properties local. Perfil limita Java a 127.0.0.1, porta opcional TECHHELP_PORT/padrão 8080, cookies Secure/HttpOnly/Lax, SQL desativado e reconhecimento de cabeçalhos do proxy. Exige proxy local que substitua cabeçalhos fornecidos pelo visitante; servidor e HTTPS ainda não configurados.
+
+HospedagemConfiguracaoTests: cinco testes executados nesta etapa, todos aprovados. Carregam os perfis reais e verificam credenciais externas, variáveis ausentes, proteção HTTPS e preservação do ambiente local, sem JPA/servidor/conexão com banco. Maven compilou os testes e confirmou BUILD SUCCESS. Não executada suíte completa nem fluxo HTTP; nenhum banco alterado, backend reiniciado ou JAR reempacotado. Instruções e limites em HOSPEDAGEM.md. Alterações locais, sem novo commit/push.
+
+Cadastro Oracle não confirmado; atendimento de criação de conta aberto e e-mail recebido apenas confirma a fila. Usuário não dispõe do tipo de cartão exigido pelo provedor; aguardar orientação do suporte, sem repetir verificação ou abrir conta duplicada. Detalhes e evidências do atendimento permanecem privados em .local-tools, fora do Git. Hospedagem gratuita é tentativa condicionada, não publicação concluída. Próxima preparação pode detalhar execução como serviço e atualização do pacote; configuração definitiva depende do servidor. Modelo recomendado: Sol — raciocínio médio.
+
+## Hospedagem independente do computador — 12/10/2026
+
+Usuário pediu hospedagem real para aprender o processo, mantendo preferência por R$ 0. Pesquisadas fontes oficiais Oracle, Render e Koyeb. Recomendação condicionada: máquina virtual Oracle Always Free com Java e MariaDB, preservando tecnologias. Oracle exige cartão para verificação, capacidade gratuita pode estar indisponível e instâncias ociosas podem ser retomadas. Usuário consultado sobre viabilidade do cadastro; aguardando resposta, sem criação de conta ou servidor pelo agente.
+
+Plano e limites em HOSPEDAGEM.md. Nenhuma publicação permanente, transferência de dados, alteração de configuração da aplicação, novo teste, commit ou push nesta etapa. Alterações anteriores da demonstração preservadas. Próxima dependência é cadastro/acesso ao provedor; não presumir autorização para plano pago nem transferência dos backups pessoais. Modelo recomendado: Sol — raciocínio médio.
+
+## Sessão do cliente validada pelo link HTTPS — 11/10/2026
+
+Usuário entrou pessoalmente na demonstração HTTPS como cliente. Página recarregada pelo agente: sessão mantida e menu correto. Consultas autenticadas carregaram pedido 1 contratado, serviço 1 aguardando início/R$ 200,00, nome do técnico e aluguéis 4/5 cancelados com valores R$ 20,00/R$ 10,00. Catálogo disponível e formulário de reserva carregaram. Conferência somente em leitura; nenhum pedido, atendimento, aluguel ou avaliação foi criado/alterado. Evidência docs/evidencias/cliente-sessao-https.jpg.
+
+Isso conclui a conferência básica do login/sessão e consultas pelo túnel; não foi enviado formulário de escrita pelo endereço público nem reconferidas contas técnico/ADMIN no túnel. Sem mudança de código ou nova execução de testes nesta retomada. Alterações da preparação e documentação seguem locais, sem novo commit/push; checkpoint anterior confirmado no GitHub f491e0d. Túnel mantido ativo conforme autorização; encerrar-link-temporario.cmd disponível para fechar o acesso. Próximo checkpoint pode incluir a preparação da demonstração, testes de proxy, scripts e documentos, excluindo .local-backups e .local-tools.
+
+## Link temporário autorizado e proxy HTTPS corrigido — 11/10/2026
+
+Após preparar o pacote, usuário autorizou explicitamente abertura do link público temporário com cadastro e uso do banco local. cloudflared 2026.10.0 baixado da fonte oficial para .local-tools (excluída do Git), sem serviço instalado. Executável mantém túnel para 127.0.0.1:8082. Endereço atual salvo apenas em .local-tools/link-atual.txt, sujeito a mudança/encerramento; não é hospedagem permanente. Encerramento disponível em encerrar-link-temporario.cmd, limitado ao executável desta pasta.
+
+Primeira conferência pública revelou página vazia: GET de módulo JavaScript com Origin HTTPS era recusado por CORS porque o HTTP local do proxy não reconhecia o esquema original. Reproduzido 403 com cabeçalhos reais. Perfil demonstracao agora usa server.forward-headers-strategy=framework, mantendo bind em loopback. Novo DemonstracaoProxyTests opt-in aprovado no contexto Spring real (somente leitura): mesma origem HTTPS passa até o recurso inexistente/404, API privada retorna 401, origem externa continua 403. Reempacotamento passou. Testes de segurança da preparação: 49 aprovados; não houve nova suíte completa.
+
+Pacote reiniciado em modo https com cookie Secure; túnel manteve o endereço. Home passou a renderizar no navegador após correção. HTTP público: raiz/categorias/CSRF 200, auth/me e usuarios/1 401 sem login; arquivos JS/CSS servidos com tipos corretos e cookie com Secure/HttpOnly. Usuário solicitado a entrar como cliente no endereço HTTPS para concluir conferência de sessão; aguardando resposta. Nenhuma escrita de negócio por esta etapa, nem novo commit/push. Backend da demonstração e túnel estão em processos iniciados pelo agente; não presumir que persistirão após encerrar o app/reiniciar a máquina. Backend habitual preservado.
+
+## Demonstração integrada preparada — 11/10/2026
+
+Usuário ainda não tem hospedagem e prefere custo zero para demonstração acadêmica. Recomendada opção de link temporário Cloudflare Quick Tunnel, consultada na documentação oficial, em vez de contratação. Não houve instalação de cloudflared ou abertura de acesso público; confirmação específica solicitada ao usuário após preparar e testar o pacote.
+
+Perfil Maven demonstracao copia frontend/dist para static no JAR; build React usa VITE_API_URL=/, mantendo frontend e API no mesmo endereço. Scripts CMD preparar-demonstracao.cmd e iniciar-demonstracao.cmd (local/https); perfil Spring demonstracao restringe bind a 127.0.0.1:8082, desativa SQL no console e usa cookies Secure por padrão, com exceção explícita apenas para conferência HTTP local. Preservados configuração habitual, ddl-auto=validate e banco local. SecurityConfig libera GET da raiz/index/arquivos visuais; APIs privadas e escritas continuam protegidas.
+
+Build integrado passou; pacote iniciou, Home/categorias/catalogo carregaram no navegador. Consultas locais: raiz e assets 200, categorias/CSRF 200, auth/me e usuarios/1 retornaram 401 sem sessão. Nenhuma escrita de negócio. Evidência docs/evidencias/demonstracao-pacote-integrado.jpg. Processo temporário 8082 e aba de conferência encerrados; backend habitual não encerrado. Primeira execução dos testes reutilizou classe antiga; após clean package passaram 49 testes de segurança, confirmada presença do novo teste liberarArquivosDoFrontendNaoLiberaApisPrivadas no relatório. Não houve nova suíte completa ou login pelo túnel.
+
+Instruções e limites em DEMONSTRACAO_ONLINE.md. Backup e demais alterações locais anteriores preservados. Não houve novo commit/push. Próxima ação depende da autorização de acesso temporário, não de nova autorização para desenvolvimento. Modelo recomendado: Sol — raciocínio médio.
+
+## Backup atual e roteiro de demonstração — 11/10/2026
+
+Checkpoint f491e0d foi enviado à branch feat/home-grafite-assistente e confirmado diretamente no GitHub na etapa anterior. Nesta etapa, backup antigo localizado no Desktop/backup_mariadb_completo.sql (concluído 22/09/2026, inclui tech_help e tech_help_teste), preservado; não houve restauração do arquivo antigo.
+
+Criadas cópias atuais em .local-backups/2026-10-11_232018: tech_help.sql (50.226 bytes) e tech_help_teste.sql (52.658 bytes). Pasta excluída do Git antes da criação. Exportações concluídas e hashes registrados no manifesto.json local. tech_help restaurado em schema temporário isolado, com 28 tabelas e 2 views; contagens de cada tabela iguais à origem. Schema temporário removido. Banco principal e de testes preservados; restauração de tech_help_teste não testada. Não houve comparação campo a campo ou teste da aplicação usando o schema restaurado.
+
+Instruções e limites em BACKUP_LOCAL.md; roteiro em ROTEIRO_DEMONSTRACAO.md. Backup permanece no mesmo computador: cópia externa depende de destino privado escolhido pelo usuário. Alterações documentais e .gitignore locais, sem novo commit/push. Nenhuma alteração de código da aplicação ou execução de suíte necessária nesta etapa. Hospedagem ainda sem destino definido; nenhuma publicação realizada. Modelo recomendado para demonstração e organização: Sol — raciocínio baixo/médio conforme a tarefa.
+
 ## Conferência por perfil e checkpoint autorizado — 11/10/2026
 
 Criado FluxoMvpIntegracaoTests opt-in, com MockMvc, sessão/login reais e MariaDB tech_help. Teste novo executado separadamente: passou cadastro, login, publicação, proposta, aceite, início, conclusão, avaliação única e logout, com bloqueios por anonimato, CSRF e perfil incorreto. Datas verificadas nas respostas. Fixtures UUID próprias removidas; banco voltou a 3 usuários, 1 solicitação, 1 proposta, 1 serviço, 0 avaliações e zero usuários/categorias TESTE-FLUXO. Não houve nova execução da suíte completa; os 72 testes anteriores continuam evidência da etapa anterior.

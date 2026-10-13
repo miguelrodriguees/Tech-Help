@@ -32,6 +32,8 @@ public class SecurityConfig {
                 .requestCache(cache -> cache.disable())
                 .authorizeHttpRequests(auth -> auth
                         .dispatcherTypeMatchers(DispatcherType.ERROR).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/", "/index.html", "/assets/**",
+                                "/favicon.svg", "/icons.svg").permitAll()
                         .requestMatchers(HttpMethod.GET, "/auth/csrf", "/categorias",
                                 "/especialidades/**", "/tecnicos/**", "/portfolios/**",
                                 "/certificacoes/**", "/ferramentas/**", "/kits/**",

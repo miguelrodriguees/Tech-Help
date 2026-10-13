@@ -407,6 +407,15 @@ class SegurancaApiTests {
     }
 
     @Test
+    void liberarArquivosDoFrontendNaoLiberaApisPrivadas() throws Exception {
+        // No WebMvcTest não há o bundle; 404 confirma que passou pela autenticação.
+        mvc.perform(get("/assets/arquivo-inexistente.js")).andExpect(status().isNotFound());
+        mvc.perform(get("/auth/me")).andExpect(status().isUnauthorized());
+        mvc.perform(get("/usuarios/1")).andExpect(status().isUnauthorized());
+        mvc.perform(post("/index.html").with(csrf())).andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void cadastroRejeitaNomeETelefoneMaioresQueAsColunas() throws Exception {
         for (String perfil : List.of("cliente", "tecnico")) {
             for (String[] campos : List.of(new String[]{"N".repeat(121), "11999999999"},
