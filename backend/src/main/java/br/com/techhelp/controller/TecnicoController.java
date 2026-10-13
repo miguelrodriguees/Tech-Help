@@ -1,6 +1,7 @@
 package br.com.techhelp.controller;
 
 import br.com.techhelp.model.Tecnico;
+import br.com.techhelp.dto.TecnicoResumoResponse;
 import br.com.techhelp.service.TecnicoService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +23,11 @@ public class TecnicoController {
         return ResponseEntity.ok(
                 tecnicoService.listarTodos()
         );
+    }
+
+    @GetMapping("/resumos")
+    public ResponseEntity<List<TecnicoResumoResponse>> resumir(@RequestParam List<Long> ids) {
+        return ResponseEntity.ok(tecnicoService.resumir(ids));
     }
 
     @GetMapping("/{id}")

@@ -65,8 +65,13 @@
                 </dependency>
                 
                 <dependency>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-security</artifactId>
+                </dependency>
+                <dependency>
                     <groupId>org.springframework.security</groupId>
-                    <artifactId>spring-security-crypto</artifactId>
+                    <artifactId>spring-security-test</artifactId>
+                    <scope>test</scope>
                 </dependency>
         </dependencies>
 
@@ -79,4 +84,18 @@
 		</plugins>
 	</build>
 
+    <profiles>
+        <profile>
+            <id>demonstracao</id>
+            <build>
+                <resources>
+                    <resource><directory>src/main/resources</directory></resource>
+                    <resource>
+                        <directory>../frontend/dist</directory>
+                        <targetPath>static</targetPath>
+                    </resource>
+                </resources>
+            </build>
+        </profile>
+    </profiles>
 </project>

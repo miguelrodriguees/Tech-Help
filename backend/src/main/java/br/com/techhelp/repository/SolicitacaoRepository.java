@@ -8,6 +8,7 @@ public interface SolicitacaoRepository
         extends JpaRepository<Solicitacao, Long> {
 
     List<Solicitacao> findByStatusOrderByDataCadastroDesc(String status);
+    List<Solicitacao> findByStatusInOrderByDataCadastroDesc(List<String> statuses);
 
     List<Solicitacao> findByIdClienteOrderByDataCadastroDesc(Long idCliente);
 }

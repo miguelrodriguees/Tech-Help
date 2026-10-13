@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarConversaRequest;
 import br.com.techhelp.model.Conversa;
 import br.com.techhelp.model.ParticipanteConversa;
@@ -14,6 +16,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class ConversaService {
 
     private final ConversaRepository conversaRepository;
@@ -34,6 +37,7 @@ public class ConversaService {
     }
 
     @Transactional
+    @PreAuthorize("@acesso.criarConversa(#request.idSolicitacao(), #request.idUsuario1(), #request.idUsuario2())")
     public Conversa criar(
             CriarConversaRequest request
     ) {
@@ -109,6 +113,7 @@ public class ConversaService {
         return conversa;
     }
 
+    @PreAuthorize("@acesso.conversa(#idConversa)")
     public Conversa buscarPorId(Long idConversa) {
 
         return conversaRepository
@@ -119,6 +124,7 @@ public class ConversaService {
                         ));
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<Conversa> listarPorUsuario(
             Long idUsuario
     ) {

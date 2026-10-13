@@ -4,6 +4,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
 import java.math.BigDecimal;
+import jakarta.validation.constraints.Digits;
 import java.time.LocalDate;
 
 public record CriarPropostaRequest(
@@ -16,6 +17,7 @@ public record CriarPropostaRequest(
 
         @NotNull
         @Positive
+        @Digits(integer = 10, fraction = 2)
         BigDecimal valor,
 
         String mensagem,

@@ -1,34 +1,49 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.AdicionarFerramentaKitRequest;
 import br.com.techhelp.model.Ferramenta;
 import br.com.techhelp.model.KitFerramenta;
 import br.com.techhelp.model.KitFerramentaId;
 import br.com.techhelp.repository.FerramentaRepository;
+import br.com.techhelp.repository.AluguelItemRepository;
 import br.com.techhelp.repository.KitFerramentaRepository;
 import br.com.techhelp.repository.KitRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class KitFerramentaService {
 
     private final KitFerramentaRepository kitFerramentaRepository;
     private final KitRepository kitRepository;
+    private final EntityManager entityManager;
+    private final AluguelItemRepository aluguelItens;
     private final FerramentaRepository ferramentaRepository;
 
     public KitFerramentaService(
             KitFerramentaRepository kitFerramentaRepository,
             KitRepository kitRepository,
-            FerramentaRepository ferramentaRepository
+            FerramentaRepository ferramentaRepository,
+            EntityManager entityManager,
+            AluguelItemRepository aluguelItens
     ) {
         this.kitFerramentaRepository = kitFerramentaRepository;
         this.kitRepository = kitRepository;
+        this.entityManager = entityManager;
+        this.aluguelItens = aluguelItens;
         this.ferramentaRepository = ferramentaRepository;
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public KitFerramenta adicionar(
             Long idKit,
             AdicionarFerramentaKitRequest request
@@ -39,6 +54,8 @@ public class KitFerramentaService {
                     "Kit não encontrado"
             );
         }
+
+        bloquearKitLivre(idKit);
 
         Ferramenta ferramenta =
                 ferramentaRepository
@@ -81,6 +98,7 @@ public class KitFerramentaService {
         return kitFerramentaRepository.save(item);
     }
 
+    @PreAuthorize("permitAll()")
     public List<KitFerramenta> listar(
             Long idKit
     ) {
@@ -95,10 +113,13 @@ public class KitFerramentaService {
                 .findByIdKit(idKit);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void remover(
             Long idKit,
             Long idFerramenta
     ) {
+
+        bloquearKitLivre(idKit);
 
         KitFerramentaId id =
                 new KitFerramentaId(
@@ -113,5 +134,14 @@ public class KitFerramentaService {
         }
 
         kitFerramentaRepository.deleteById(id);
+    }
+
+    private void bloquearKitLivre(Long idKit) {
+        var kit = kitRepository.findById(idKit)
+                .orElseThrow(() -> new NoSuchElementException("Kit não encontrado"));
+        entityManager.refresh(kit, LockModeType.PESSIMISTIC_WRITE);
+        if (aluguelItens.contarReservasAtivasDoKit(idKit) > 0) {
+            throw new IllegalArgumentException("Não é possível alterar a composição de um kit com aluguel ativo");
+        }
     }
 }

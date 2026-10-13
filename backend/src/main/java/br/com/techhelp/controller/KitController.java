@@ -1,6 +1,7 @@
 package br.com.techhelp.controller;
 
 import br.com.techhelp.dto.CriarKitRequest;
+import br.com.techhelp.dto.AtualizarKitRequest;
 import br.com.techhelp.model.Kit;
 import br.com.techhelp.service.KitService;
 import jakarta.validation.Valid;
@@ -31,6 +32,11 @@ public class KitController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(kitService.criar(request));
+    }
+
+    @PutMapping("/{idKit}")
+    public Kit atualizar(@PathVariable Long idKit, @Valid @RequestBody AtualizarKitRequest request) {
+        return kitService.atualizar(idKit, request);
     }
 
     @GetMapping

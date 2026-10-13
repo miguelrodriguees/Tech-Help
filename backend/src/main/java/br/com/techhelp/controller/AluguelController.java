@@ -1,6 +1,7 @@
 package br.com.techhelp.controller;
 
 import br.com.techhelp.dto.CriarAluguelRequest;
+import br.com.techhelp.dto.AlugueisAdminResponse;
 import br.com.techhelp.model.Aluguel;
 import br.com.techhelp.service.AluguelService;
 import jakarta.validation.Valid;
@@ -20,6 +21,11 @@ public class AluguelController {
             AluguelService aluguelService
     ) {
         this.aluguelService = aluguelService;
+    }
+
+    @GetMapping("/administracao")
+    public AlugueisAdminResponse listarParaAdministracao(@RequestParam(defaultValue = "0") int pagina) {
+        return aluguelService.listarParaAdministracao(pagina);
     }
 
     @PostMapping

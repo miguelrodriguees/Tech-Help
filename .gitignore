@@ -17,3 +17,7 @@ nbproject/private/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Backups locais contêm dados pessoais e não devem ser enviados ao GitHub
+/.local-backups/
+/.local-tools/

@@ -1,6 +1,7 @@
 package br.com.techhelp.dto;
 
 import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Size;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -20,6 +21,7 @@ public record CriarAvaliacaoRequest(
         @Max(5)
         Integer nota,
 
+        @Size(max = 3000)
         String comentario
 
 ) {

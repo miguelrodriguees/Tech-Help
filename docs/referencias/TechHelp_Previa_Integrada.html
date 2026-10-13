@@ -1,0 +1,2211 @@
+<!doctype html>
+<html lang="pt-BR" translate="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0e0f11">
+<title>TechHelp — preview da proposta de frontend</title>
+
+
+
+<style>
+
+/* Faixa do preview: existe só neste arquivo, não vai para o projeto React. */
+html, body { background: #0e0f11; }
+body { margin: 0; }
+.pv-bar { border-bottom: 1px solid #2a2d32; background: #131518; }
+.pv-bar-inner {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+  gap: 12px 24px; max-width: 1200px; margin-inline: auto;
+  padding: 14px clamp(20px, 4vw, 44px);
+}
+.pv-bar p { margin: 0; font-size: 13px; line-height: 1.5; color: #a8aab0; max-width: 70ch; }
+.pv-bar b { color: #f4f1ea; }
+.pv-bar code { font-family: ui-monospace, Consolas, monospace; font-size: 12.5px; color: #ffbb92; }
+.pv-modes { display: flex; flex-wrap: wrap; gap: 6px; }
+.pv-modes button {
+  min-height: 38px; padding: 8px 12px; border: 1px solid #2a2d32; border-radius: 999px;
+  background: #1c1f24; color: #a8aab0; font: inherit; font-size: 13px; cursor: pointer;
+}
+.pv-modes button[aria-pressed="true"] { border-color: #ff8a4c; background: #2a1d14; color: #ffbb92; }
+.pv-modes button:focus-visible { outline: 2px solid #ff8a4c; outline-offset: 2px; }
+
+/* ==========================================================================
+   TechHelp — tokens. Direção "Do ruído à conexão".
+   Duas famílias com papéis distintos, paleta grafite/laranja/off-white,
+   e uma escala de superfícies com profundidade real.
+   ========================================================================== */
+
+.techhelp-site {
+  --bg: #08090b;
+  --bg-lift: #0e1013;
+  --panel: #14171b;
+  --panel-2: #1b1f24;
+  --inset: #0b0d10;
+  --ink: #f6f3ec;
+  --ink-read: #c8c6c0;
+  --ink-dim: #9fa1a7;
+  --ink-faint: #6f7178;
+  --line: #24282d;
+  --line-soft: #191d21;
+  --signal: #ff7a33;
+  --signal-soft: #ffb488;
+  --signal-ink: #1a0d05;
+  --signal-deep: #8e3a11;
+  --warm: #15100c;
+  --line-warm: #3f2c1e;
+  --error: #ff9c8d;
+  --error-bg: #26191a;
+  --error-line: #a9503c;
+
+  --r-panel: 18px;
+  --r-card: 10px;
+  --r-control: 8px;
+  --r-chip: 999px;
+
+  --ease: cubic-bezier(.2, .8, .3, 1);
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --t-press: .14s;
+  --t-select: .2s;
+  --t-step: .32s;
+  --t-enter: .6s;
+
+  --display: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+  --text: Inter, "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
+  --mono: ui-monospace, "Cascadia Mono", Consolas, monospace;
+
+  --container: 1240px;
+  --gutter: clamp(18px, 4vw, 48px);
+
+  color-scheme: dark;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--text);
+  font-size: 15.5px;
+  line-height: 1.6;
+  overflow-wrap: break-word;
+  -webkit-text-size-adjust: 100%;
+}
+
+.techhelp-site *, .techhelp-site *::before, .techhelp-site *::after { box-sizing: border-box; }
+.techhelp-site [hidden] { display: none !important; }
+.techhelp-site svg { flex-shrink: 0; }
+.techhelp-site button, .techhelp-site input, .techhelp-site textarea { font: inherit; color: inherit; }
+.techhelp-site button, .techhelp-site summary { cursor: pointer; }
+.techhelp-site :focus-visible { outline: 2px solid var(--signal); outline-offset: 3px; border-radius: 4px; }
+.techhelp-site h1, .techhelp-site h2, .techhelp-site h3, .techhelp-site h4 { margin: 0; font-weight: 600; }
+
+/* Tipografia: display com personalidade, texto para leitura longa. */
+.th-display {
+  font-family: var(--display);
+  font-size: clamp(40px, 7.4vw, 96px);
+  line-height: .95;
+  letter-spacing: -.042em;
+  font-weight: 700;
+  margin: 0;
+}
+.th-h2 {
+  font-family: var(--display);
+  font-size: clamp(27px, 3.6vw, 46px);
+  line-height: 1.04;
+  letter-spacing: -.032em;
+  font-weight: 700;
+}
+.th-h3 { font-family: var(--display); font-size: 19px; line-height: 1.25; letter-spacing: -.02em; font-weight: 600; }
+.th-lead { font-size: clamp(16.5px, 1.4vw, 19px); line-height: 1.55; color: var(--ink-read); max-width: 44ch; margin: 0; }
+.th-body { font-size: 15.5px; line-height: 1.68; color: var(--ink-dim); margin: 0; max-width: 60ch; }
+.th-micro { font-size: 12.5px; line-height: 1.5; color: var(--ink-faint); margin: 0; }
+.th-seq { font-family: var(--mono); font-size: 12px; letter-spacing: .06em; font-variant-numeric: tabular-nums; color: var(--signal-soft); }
+
+.th-button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 9px;
+  min-height: 48px; padding: 13px 22px;
+  border-radius: var(--r-control); border: 1px solid var(--signal);
+  background: var(--signal); color: var(--signal-ink);
+  font-weight: 600; font-size: 15px; letter-spacing: -.005em;
+  box-shadow: inset 0 1px 0 #ffffff3d, 0 2px 14px #ff7a3326;
+  transition: background var(--t-press) var(--ease), box-shadow var(--t-press) var(--ease), transform var(--t-press) var(--ease);
+}
+.th-button.secondary { background: var(--panel-2); border-color: var(--line); color: var(--ink); box-shadow: none; }
+.th-button[disabled] { opacity: .5; cursor: not-allowed; }
+
+.th-link {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 6px 0;
+  border: 0; background: none; color: var(--signal); font-size: 14.5px;
+  text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 4px;
+}
+.th-link.quiet { color: var(--ink-dim); }
+.th-link.quiet:hover { color: var(--ink); }
+
+.th-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px;
+  border-radius: var(--r-chip); border: 1px solid var(--line);
+  background: #ffffff08; color: var(--ink-dim); font-size: 12px; line-height: 1.5; white-space: nowrap;
+}
+.th-chip.live { border-color: #4a3324; color: var(--signal-soft); }
+.th-chip.live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--signal); }
+
+.th-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.th-skip {
+  position: fixed; left: 16px; top: -80px; z-index: 60; padding: 12px 16px;
+  border-radius: var(--r-control); background: var(--signal); color: var(--signal-ink);
+  font-weight: 600; text-decoration: none; transition: top var(--t-select) var(--ease);
+}
+.th-skip:focus { top: 14px; }
+
+@keyframes th-rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+@keyframes th-fade { from { opacity: 0; } to { opacity: 1; } }
+.th-enter { animation: th-rise var(--t-enter) var(--ease-out) both; }
+.th-enter-1 { animation-delay: .05s; }
+.th-enter-2 { animation-delay: .15s; }
+.th-enter-3 { animation-delay: .25s; }
+.th-enter-4 { animation-delay: .35s; }
+
+.techhelp-site.th-paused *, .techhelp-site.th-paused *::before, .techhelp-site.th-paused *::after {
+  animation: none !important; transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .techhelp-site *, .techhelp-site *::before, .techhelp-site *::after {
+    animation: none !important; transition: none !important; scroll-behavior: auto !important;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .th-button:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 #ffffff4d, 0 8px 22px #ff7a3333; }
+  .th-button.secondary:hover { background: #22262c; border-color: #363b42; }
+  .th-button:active { transform: translateY(0) scale(.99); }
+}
+
+/* ==========================================================================
+   TechHelp — Home. Composição "Do ruído à conexão".
+   O topo é um palco de borda a borda com uma placa feita de módulos que se
+   desfazem perto do ponteiro. O texto se apoia sobre ela e a entrada do
+   assistente é uma faixa larga no pé do palco, não um cartão lateral.
+   ========================================================================== */
+
+.th-inner { width: 100%; max-width: var(--container); margin-inline: auto; padding-inline: var(--gutter); }
+
+/* ---------- Cabeçalho ---------- */
+.th-header { position: relative; z-index: 30; background: transparent; }
+.th-header-inner { display: flex; align-items: center; gap: 20px; min-height: 72px; padding-block: 12px; }
+.th-brand {
+  display: inline-flex; align-items: center; gap: 10px; margin-right: auto; padding: 6px 0;
+  border: 0; background: none; color: var(--ink);
+  font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: -.04em; white-space: nowrap;
+}
+.th-mark { width: 24px; height: 24px; }
+.th-mark .th-mark-body { fill: #1b1f24; stroke: #33383f; }
+.th-mark .th-mark-signal { fill: var(--signal); }
+.th-mark .th-mark-line { stroke: var(--ink); }
+
+.th-nav { display: flex; align-items: center; gap: 2px; }
+.th-nav-link {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 10px 12px;
+  border: 0; border-radius: var(--r-control); background: none; color: var(--ink-dim); font-size: 14.5px;
+  transition: color var(--t-press) var(--ease), background var(--t-press) var(--ease);
+}
+.th-nav-link:hover { color: var(--ink); background: #ffffff0a; }
+.th-nav-rental { color: var(--signal-soft); }
+.th-nav-rental:hover { color: var(--signal); background: #ff7a3314; }
+.th-nav-rental svg { width: 15px; height: 15px; }
+.th-nav .th-button { margin-left: 10px; min-height: 42px; padding: 10px 16px; }
+.th-menu-toggle { display: none; min-height: 44px; padding: 10px 14px; }
+
+.th-mobile-nav { position: relative; z-index: 25; border-bottom: 1px solid var(--line-soft); background: var(--bg-lift); animation: th-fade var(--t-step) var(--ease) both; }
+.th-mobile-nav .th-inner { display: grid; padding-block: 8px 18px; }
+.th-mobile-nav button {
+  display: flex; align-items: center; gap: 9px; width: 100%; min-height: 52px; padding: 12px 4px;
+  border: 0; border-bottom: 1px solid var(--line-soft); background: none; color: var(--ink);
+  font-size: 16px; text-align: left;
+}
+.th-mobile-nav button:last-child { border-bottom: 0; }
+.th-mobile-nav .th-nav-rental { color: var(--signal-soft); }
+
+/* ---------- Palco do topo ---------- */
+.hx-stage { position: relative; isolation: isolate; overflow: clip; border-bottom: 1px solid var(--line-soft); }
+.hx-canvas-wrap {
+  position: absolute; z-index: -2; inset: 0 0 0 auto;
+  width: min(74%, 980px); height: 100%; pointer-events: none;
+}
+.hx-canvas-wrap canvas { display: block; width: 100%; height: 100%; }
+/* Área que recebe o ponteiro para a arte, sem passar por cima do texto. */
+.hx-canvas-hit { position: absolute; z-index: 0; inset: 0 0 0 auto; width: min(74%, 980px); height: 100%; }
+.hx-scrim {
+  position: absolute; z-index: -1; inset: 0; pointer-events: none;
+  background:
+    linear-gradient(100deg, var(--bg) 22%, #08090bd9 42%, #08090b40 62%, transparent 78%),
+    radial-gradient(70% 90% at 78% 40%, #ff7a331f, transparent 70%);
+}
+.hx-stage-inner {
+  position: relative; z-index: 2;
+  display: grid; align-content: end; gap: 24px;
+  min-height: min(86vh, 760px);
+  padding-block: clamp(36px, 7vw, 92px) 0;
+  pointer-events: none;
+}
+.hx-stage-inner > * { pointer-events: auto; }
+.hx-title { max-width: 15ch; }
+.hx-title .hx-soft { color: var(--ink-dim); }
+.hx-stage-inner .th-lead { max-width: 38ch; }
+
+/* Faixa de entrada do assistente */
+.hx-command {
+  position: relative; z-index: 3;
+  display: grid; grid-template-columns: minmax(0, 250px) minmax(0, 1fr); align-items: center;
+  gap: 16px clamp(20px, 3vw, 44px);
+  margin-top: clamp(14px, 3vw, 34px);
+  padding: 20px clamp(18px, 2.4vw, 28px);
+  border: 1px solid #2d3239; border-top-color: #3d434b; border-bottom: 0;
+  border-radius: var(--r-panel) var(--r-panel) 0 0;
+  background: linear-gradient(180deg, #181c21, #111417);
+  box-shadow: 0 -1px 0 #ffffff12 inset, 0 -24px 60px -30px #ff7a3333;
+}
+.hx-command-label { display: grid; gap: 5px; }
+.hx-command-label b { font-family: var(--display); font-size: clamp(17px, 1.6vw, 21px); font-weight: 600; letter-spacing: -.025em; }
+.hx-command-label span { font-size: 13px; color: var(--ink-faint); }
+.hx-chips { display: flex; flex-wrap: wrap; gap: 9px; }
+.hx-chip-btn {
+  display: inline-flex; align-items: center; gap: 9px; min-height: 48px; padding: 11px 17px 11px 14px;
+  border: 1px solid #333940; border-radius: var(--r-chip); background: #1e2329; color: var(--ink);
+  font-size: 15px; font-weight: 500; letter-spacing: -.01em;
+  transition: border-color var(--t-select) var(--ease), background var(--t-select) var(--ease), transform var(--t-press) var(--ease);
+}
+.hx-chip-btn svg { width: 18px; height: 18px; color: var(--signal); }
+.hx-chip-btn.ghost { border-style: dashed; background: #ffffff05; color: var(--ink-dim); }
+.hx-chip-btn.ghost svg { color: var(--ink-faint); }
+.hx-command-note { grid-column: 1 / -1; margin: 0; font-size: 12.5px; color: var(--ink-faint); }
+
+.hx-state { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.hx-state p { margin: 0; font-size: 14px; color: var(--ink-dim); max-width: 52ch; }
+.hx-state strong { color: var(--ink); font-weight: 600; }
+.hx-skeleton { height: 48px; width: 132px; border-radius: var(--r-chip); background: linear-gradient(100deg, #1a1e23 30%, #23282e 50%, #1a1e23 70%) 0 0 / 300% 100%; animation: hx-shimmer 1.4s linear infinite; }
+@keyframes hx-shimmer { to { background-position: -150% 0; } }
+
+/* ---------- Explorador de áreas ---------- */
+.hx-explorer { padding-block: clamp(56px, 8vw, 116px); scroll-margin-top: 20px; }
+.hx-explorer-head { display: grid; gap: 14px; max-width: 54ch; margin-bottom: clamp(28px, 4vw, 48px); }
+.hx-explorer-grid { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, .95fr); gap: clamp(28px, 4vw, 64px); align-items: start; }
+.hx-list { display: grid; border-top: 1px solid var(--line); }
+.hx-row {
+  position: relative; display: grid; grid-template-columns: 28px minmax(0, 1fr) auto; align-items: center;
+  gap: 2px 14px; padding: 18px 8px 18px 14px; border: 0; border-bottom: 1px solid var(--line-soft);
+  background: none; color: var(--ink); text-align: left;
+  transition: background var(--t-select) var(--ease), padding-left var(--t-select) var(--ease);
+}
+.hx-row::before { content: ""; position: absolute; left: 0; top: 12px; bottom: 12px; width: 2px; background: var(--signal); transform: scaleY(0); transform-origin: top; transition: transform var(--t-select) var(--ease); }
+.hx-row > svg { grid-row: span 2; width: 20px; height: 20px; color: var(--ink-faint); transition: color var(--t-select) var(--ease); }
+.hx-row-name { font-family: var(--display); font-size: 19px; font-weight: 600; letter-spacing: -.025em; }
+.hx-row-desc { grid-column: 2; font-size: 13px; line-height: 1.5; color: var(--ink-faint); max-width: 46ch; }
+.hx-row .th-chip { grid-row: span 2; }
+.hx-row.is-active { background: #ffffff07; padding-left: 20px; }
+.hx-row.is-active::before { transform: scaleY(1); }
+.hx-row.is-active > svg { color: var(--signal); }
+
+.hx-figure {
+  position: sticky; top: 24px; margin: 0;
+  display: grid; gap: 14px; padding: clamp(20px, 2.6vw, 32px);
+  border: 1px solid var(--line); border-radius: var(--r-panel);
+  background: radial-gradient(120% 90% at 50% 0, #ffffff09, transparent 60%), var(--panel);
+}
+.hx-figure svg { width: 100%; height: auto; }
+.hx-figure figcaption { font-size: 13px; line-height: 1.55; color: var(--ink-faint); }
+.hx-figure figcaption b { display: block; margin-bottom: 4px; color: var(--ink); font-family: var(--display); font-size: 15px; font-weight: 600; letter-spacing: -.02em; }
+.dg-plate { fill: #1b1f24; stroke: #383e45; }
+.dg-part { fill: #23282e; stroke: #454b53; }
+.dg-hot { fill: var(--signal); }
+.dg-soft { fill: #3a4048; }
+.dg-line { stroke: #4b525a; fill: none; }
+.dg-line-hot { stroke: var(--signal); fill: none; }
+
+/* ---------- Narrativa ---------- */
+.hx-narrative { padding-block: clamp(56px, 7vw, 104px); border-top: 1px solid var(--line-soft); background: var(--bg-lift); scroll-margin-top: 20px; }
+.hx-narrative-head { display: grid; gap: 14px; max-width: 46ch; margin-bottom: clamp(30px, 4vw, 52px); }
+.hx-moments { position: relative; display: grid; gap: clamp(26px, 3vw, 44px); margin: 0; padding: 0 0 0 clamp(30px, 4vw, 52px); list-style: none; }
+.hx-moments::before { content: ""; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 1px; background: linear-gradient(180deg, var(--signal) 0 14%, #2b3036 14% 100%); }
+.hx-moment { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 6px clamp(20px, 3vw, 48px); align-items: start; }
+.hx-moment::before { content: ""; position: absolute; left: calc(clamp(30px, 4vw, 52px) * -1 + 2px); top: 10px; width: 9px; height: 9px; border-radius: 50%; background: #2b3036; }
+.hx-moment.is-live::before { background: var(--signal); box-shadow: 0 0 0 4px #ff7a331f; }
+.hx-moment h3 { font-family: var(--display); font-size: clamp(21px, 2.3vw, 30px); font-weight: 600; letter-spacing: -.03em; line-height: 1.08; }
+.hx-moment .th-seq { display: block; margin-bottom: 8px; }
+.hx-moment p { margin: 0; font-size: 15px; line-height: 1.65; color: var(--ink-dim); max-width: 46ch; }
+.hx-quote {
+  margin: 14px 0 0; padding: 18px 20px; border-left: 2px solid var(--signal);
+  background: #ffffff06; border-radius: 0 var(--r-card) var(--r-card) 0;
+  font-family: var(--display); font-size: clamp(18px, 2vw, 24px); line-height: 1.24; letter-spacing: -.028em; color: var(--ink);
+}
+.hx-quote figcaption { margin-top: 10px; font-family: var(--text); font-size: 12.5px; letter-spacing: 0; line-height: 1.5; color: var(--ink-faint); }
+.hx-narrative-note { display: flex; gap: 10px; margin: clamp(28px, 4vw, 44px) 0 0; padding-top: 20px; border-top: 1px solid var(--line-soft); font-size: 13.5px; color: var(--ink-faint); }
+.hx-narrative-note svg { width: 16px; height: 16px; margin-top: 3px; color: var(--signal-soft); }
+
+/* ---------- Aluguel ---------- */
+.hx-rental { border-block: 1px solid var(--line-warm); background: radial-gradient(80% 120% at 20% 20%, #ff7a3316, transparent 60%), var(--warm); scroll-margin-top: 20px; }
+.hx-rental-inner { display: grid; gap: clamp(28px, 4vw, 52px); padding-block: clamp(56px, 7vw, 104px); }
+.hx-rental-top { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: clamp(18px, 3vw, 56px); align-items: end; }
+.hx-rental-top .th-h2 { max-width: 16ch; }
+.hx-rental-top .th-body { color: #b3a89f; }
+.hx-kit { width: 100%; height: auto; }
+.kt-surface { fill: #1d1712; stroke: #4a3526; }
+.kt-body { fill: #2b231b; stroke: #6a513c; }
+.kt-metal { fill: #8c9199; }
+.kt-metal-dark { fill: #5d6167; }
+.kt-grip { fill: var(--signal); }
+.kt-grip-2 { fill: #c05a22; }
+.kt-hole { fill: #14100c; }
+.hx-path { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin: 0; padding: 0; list-style: none; background: var(--line-warm); border: 1px solid var(--line-warm); border-radius: var(--r-card); overflow: hidden; }
+.hx-path li { display: grid; gap: 6px; padding: 20px; background: #191310; }
+.hx-path b { font-family: var(--display); font-size: 17px; font-weight: 600; letter-spacing: -.02em; color: #eadfd6; }
+.hx-path span:last-child { font-size: 13.5px; line-height: 1.55; color: #a2968c; }
+.hx-rental-note { display: flex; gap: 10px; margin: 0; font-size: 13px; color: #9b8e85; max-width: 64ch; }
+.hx-rental-note svg { width: 15px; height: 15px; margin-top: 3px; color: var(--signal-soft); }
+
+/* ---------- Profissionais ---------- */
+.hx-pro { padding-block: clamp(52px, 7vw, 96px); scroll-margin-top: 20px; }
+.hx-pro-inner { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(26px, 4vw, 60px); align-items: center; }
+.hx-pro-text { display: grid; gap: 16px; }
+.hx-ficha { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--line); overflow: hidden; }
+.hx-ficha > h3 { grid-column: 1 / -1; padding: 14px 18px; background: var(--panel); font-family: var(--text); font-size: 12.5px; font-weight: 500; letter-spacing: 0; color: var(--ink-faint); }
+.hx-slot { display: grid; gap: 6px; align-content: start; min-height: 112px; padding: 18px; background: var(--inset); }
+.hx-slot svg { width: 18px; height: 18px; color: var(--signal-soft); }
+.hx-slot b { font-family: var(--display); font-size: 15px; font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
+.hx-slot small { font-size: 12.5px; line-height: 1.45; color: var(--ink-faint); }
+
+.techhelp-site details { border-top: 1px solid var(--line-soft); }
+.techhelp-site summary { display: flex; align-items: center; gap: 9px; min-height: 48px; padding: 12px 0; color: var(--signal); font-size: 14.5px; font-weight: 600; list-style: none; }
+.techhelp-site summary::-webkit-details-marker { display: none; }
+.techhelp-site summary svg { width: 15px; height: 15px; transition: transform var(--t-step) var(--ease); }
+.techhelp-site details[open] summary svg { transform: rotate(90deg); }
+.techhelp-site details > p { margin: 0 0 18px; font-size: 14px; line-height: 1.6; color: var(--ink-dim); max-width: 54ch; }
+
+/* ---------- Fechamento ---------- */
+.hx-end { border-top: 1px solid var(--line-soft); background: radial-gradient(60% 140% at 50% 120%, #ff7a3322, transparent 70%), var(--bg); }
+.hx-end-inner { display: grid; justify-items: center; gap: 20px; padding-block: clamp(60px, 8vw, 120px); text-align: center; }
+.hx-end-inner .th-h2 { max-width: 18ch; }
+.hx-end-inner p { margin: 0; max-width: 46ch; font-size: 15.5px; line-height: 1.6; color: var(--ink-dim); }
+.hx-end-strip { display: flex; gap: 5px; }
+.hx-end-strip i { display: block; width: 10px; height: 10px; border-radius: 2px; background: #22262c; }
+.hx-end-strip i:nth-child(3n) { background: #33383f; }
+.hx-end-strip i:nth-child(5) { background: var(--signal); }
+.hx-end-strip i:nth-child(9) { background: var(--signal-deep); }
+
+/* ---------- Rodapé ---------- */
+.th-footer { border-top: 1px solid var(--line-soft); background: var(--bg); }
+.th-footer-inner { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px 28px; padding-block: 26px 32px; }
+.th-footer-brand { display: grid; gap: 3px; font-size: 13px; color: var(--ink-faint); }
+.th-footer-brand strong { color: var(--ink); font-family: var(--display); font-weight: 600; font-size: 15px; letter-spacing: -.03em; }
+.th-footer-links { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.th-footer-links button { min-height: 44px; padding: 10px 12px; border: 0; border-radius: var(--r-control); background: none; color: var(--ink-dim); font-size: 13.5px; }
+.th-footer-links button:hover { color: var(--ink); background: #ffffff0a; }
+.th-footer-links button svg { width: 14px; height: 14px; margin-right: 7px; vertical-align: -2px; }
+
+/* ---------- Diálogo ---------- */
+.th-dialog { width: min(480px, calc(100% - 32px)); padding: 28px; border: 1px solid var(--line); border-radius: var(--r-panel); background: var(--panel); color: var(--ink); box-shadow: 0 40px 90px -20px #000000c4; }
+.th-dialog::backdrop { background: #04050699; }
+.th-dialog h2 { font-family: var(--display); font-size: 21px; letter-spacing: -.03em; margin-bottom: 10px; }
+.th-dialog p { margin: 0 0 22px; font-size: 14.5px; line-height: 1.6; color: var(--ink-dim); }
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .hx-chip-btn:hover { border-color: var(--signal); background: #2a1e16; transform: translateY(-2px); }
+  .hx-row:hover { background: #ffffff07; }
+}
+
+@media (max-width: 1080px) {
+  .hx-canvas-wrap, .hx-canvas-hit { width: 86%; }
+  .hx-explorer-grid, .hx-pro-inner, .hx-rental-top { grid-template-columns: 1fr; }
+  .hx-figure { position: static; }
+}
+@media (max-width: 960px) {
+  .th-nav { display: none; }
+  .th-menu-toggle { display: inline-flex; }
+}
+@media (max-width: 860px) {
+  .hx-command { grid-template-columns: 1fr; }
+  .hx-moment { grid-template-columns: 1fr; gap: 10px; }
+  .hx-path { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) {
+  /* No celular a arte vira o topo da composição e o texto vem abaixo dela. */
+  .hx-stage-inner { min-height: 0; padding-top: 250px; }
+  .hx-canvas-wrap, .hx-canvas-hit { width: 100%; height: 290px; bottom: auto; }
+  .hx-scrim { background: linear-gradient(180deg, transparent 0 32%, #08090bd9 46%, var(--bg) 60%), radial-gradient(80% 40% at 60% 18%, #ff7a3322, transparent 70%); }
+  .hx-title { max-width: 100%; }
+  .hx-command { margin-inline: calc(var(--gutter) * -1); border-radius: 0; border-inline: 0; padding: 18px var(--gutter); }
+  .hx-chip-btn { width: 100%; }
+  .hx-ficha { grid-template-columns: 1fr; }
+  .th-footer-inner { flex-direction: column; align-items: flex-start; }
+  .hx-row { grid-template-columns: 24px minmax(0, 1fr); }
+  .hx-row .th-chip { grid-column: 2; grid-row: 3; justify-self: start; margin-top: 8px; }
+}
+
+/* ==========================================================================
+   TechHelp — assistente de solicitação.
+   Mesma linguagem da Home: painel elevado, uma luz, laranja só na ação e no
+   estado selecionado. A altura da área de conteúdo é estabilizada para o
+   formulário não pular entre etapas.
+   ========================================================================== */
+
+.th-wizard { position: relative; isolation: isolate; scroll-margin-top: 80px; }
+.th-wizard::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -60px 0 auto;
+  height: 420px;
+  pointer-events: none;
+  background: radial-gradient(60% 100% at 50% 0, #ff8a4c14, transparent 70%);
+}
+.th-wizard-inner {
+  width: 100%;
+  max-width: 860px;
+  margin-inline: auto;
+  padding: clamp(20px, 3vw, 36px) var(--gutter) clamp(48px, 6vw, 80px);
+}
+
+.th-wizard-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 14px;
+}
+
+/* ---------- Trilha de progresso ---------- */
+
+.th-rail { margin-bottom: 20px; }
+.th-rail-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.th-rail-steps li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  color: var(--ink-faint);
+  font-size: 13px;
+  transition: color var(--t-step) var(--ease);
+}
+.th-rail-steps li span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.th-rail-steps .is-done { color: var(--ink-dim); }
+.th-rail-steps .is-now { color: var(--ink); font-weight: 600; }
+.th-dot {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--panel-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  transition: background var(--t-step) var(--ease), border-color var(--t-step) var(--ease), color var(--t-step) var(--ease);
+}
+.th-dot svg { width: 13px; height: 13px; }
+.is-done .th-dot { border-color: #55412f; background: #2a1f16; color: var(--signal-soft); }
+.is-now .th-dot { border-color: var(--signal); background: var(--signal); color: var(--signal-ink); font-weight: 600; }
+
+.th-rail-track { height: 3px; border-radius: 3px; background: #21242a; overflow: hidden; }
+.th-rail-track > div {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, #d96e33, var(--signal));
+  transition: width .42s var(--ease-out);
+}
+
+/* ---------- Painel do formulário ---------- */
+
+.th-flow {
+  padding: clamp(22px, 3vw, 38px);
+  animation: th-rise var(--t-step) var(--ease-out) both;
+}
+.th-flow-body { min-height: 340px; }
+.th-flow-head { display: grid; gap: 10px; margin-bottom: 8px; }
+.th-flow-area { font-size: 13px; color: var(--signal-soft); }
+.th-flow-title {
+  font-family: var(--display);
+  font-size: clamp(24px, 2.8vw, 33px);
+  line-height: 1.12;
+  letter-spacing: -.028em;
+  font-weight: 600;
+  margin: 0;
+}
+.th-flow-title:focus-visible { outline-offset: 6px; }
+.th-flow-head p { margin: 0; font-size: 15px; line-height: 1.6; color: var(--ink-dim); max-width: 52ch; }
+
+/* ---------- Perguntas ---------- */
+
+.th-question { min-width: 0; margin: 28px 0 0; padding: 0; border: 0; }
+.th-question > legend {
+  font-family: var(--display);
+  padding: 0;
+  margin-bottom: 12px;
+  font-size: 17.5px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -.015em;
+  color: var(--ink);
+}
+.th-question-enter { animation: th-rise .26s var(--ease-out) both; }
+
+.th-options { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.th-options.th-options-1 { grid-template-columns: 1fr; }
+.th-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  padding: 13px 15px;
+  border: 1px solid #32363c;
+  border-radius: var(--r-control);
+  background: var(--panel-2);
+  color: var(--ink-dim);
+  font-size: 15px;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: border-color var(--t-select) var(--ease), background var(--t-select) var(--ease), color var(--t-select) var(--ease);
+}
+.th-option input {
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 19px;
+  height: 19px;
+  margin: 0;
+  border: 1px solid #55595f;
+  border-radius: 50%;
+  background: #0f1114;
+  transition: border-color var(--t-select) var(--ease);
+}
+.th-option input::after {
+  content: "";
+  display: block;
+  width: 9px;
+  height: 9px;
+  margin: 4px;
+  border-radius: 50%;
+  background: var(--signal);
+  transform: scale(0);
+  transition: transform .18s var(--ease-out);
+}
+.th-option:has(input:checked) {
+  border-color: var(--signal);
+  background: #2a1d14;
+  color: var(--ink);
+  font-weight: 500;
+}
+.th-option:has(input:checked) input { border-color: var(--signal); }
+.th-option input:checked::after { transform: scale(1); }
+.th-option:has(input:focus-visible) { outline: 2px solid var(--signal); outline-offset: 3px; }
+
+/* ---------- Campos de texto ---------- */
+
+.th-label { display: grid; gap: 7px; margin-top: 18px; font-size: 14.5px; font-weight: 600; color: var(--ink); }
+.th-label > span { font-weight: 400; color: var(--ink-faint); }
+.th-field {
+  width: 100%;
+  min-height: 48px;
+  padding: 13px 14px;
+  border: 1px solid #383c43;
+  border-radius: var(--r-control);
+  background: var(--inset);
+  color: var(--ink);
+  font-size: 16px;
+  transition: border-color var(--t-select) var(--ease), box-shadow var(--t-select) var(--ease);
+}
+.th-field::placeholder { color: #6b6d73; }
+.th-field:hover { border-color: #4a4e56; }
+.th-field:focus { border-color: var(--signal); box-shadow: 0 0 0 3px #ff8a4c26; outline: none; }
+textarea.th-field { min-height: 136px; resize: vertical; line-height: 1.6; }
+.th-field-meta { display: flex; justify-content: space-between; gap: 12px; margin-top: 8px; font-size: 12.5px; color: var(--ink-faint); }
+
+.th-subgroup { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line-soft); }
+.th-subgroup > h2 {
+  font-family: var(--display); font-size: 17.5px; font-weight: 600; letter-spacing: -.015em; margin-bottom: 8px; }
+.th-subgroup > p { margin: 0 0 4px; font-size: 14px; color: var(--ink-dim); max-width: 50ch; }
+
+/* ---------- Avisos ---------- */
+
+.th-note {
+  display: flex;
+  gap: 11px;
+  margin: 22px 0 0;
+  padding: 15px 16px;
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--signal);
+  border-radius: 0 var(--r-control) var(--r-control) 0;
+  background: #ffffff06;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--ink-dim);
+}
+.th-note svg { width: 16px; height: 16px; margin-top: 2px; color: var(--signal-soft); }
+.th-note.th-error { border-color: var(--error-line); border-left-color: var(--error-line); background: var(--error-bg); color: var(--error); }
+.th-note.th-error svg { color: var(--error); }
+
+/* ---------- Ações ---------- */
+
+.th-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 30px;
+  padding-top: 24px;
+  border-top: 1px solid var(--line-soft);
+}
+.th-actions .th-button { flex: 0 1 auto; }
+
+.th-draft-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin: 16px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-faint);
+}
+.th-draft-note svg { width: 15px; height: 15px; margin-top: 2px; }
+
+/* ---------- Revisão ---------- */
+
+.th-review { display: grid; gap: 0; margin: 24px 0 0; }
+.th-review-group { border-top: 1px solid var(--line-soft); padding: 18px 0; }
+.th-review-group:last-of-type { border-bottom: 1px solid var(--line-soft); }
+.th-review-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.th-review-head h2 {
+  font-family: var(--display); font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
+.th-review-head .th-link { min-height: 36px; font-size: 13.5px; }
+.th-review-rows { display: grid; gap: 0; margin: 0; }
+.th-review-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+  gap: 4px 20px;
+  padding: 8px 0;
+  font-size: 14.5px;
+}
+.th-review-row dt { color: var(--ink-faint); font-size: 13.5px; }
+.th-review-row dd { margin: 0; color: var(--ink); white-space: pre-wrap; }
+.th-review-row dd em { font-style: normal; color: var(--ink-faint); }
+
+@media (max-width: 640px) {
+  .th-options { grid-template-columns: 1fr; }
+  .th-flow { padding: 20px 16px; }
+  .th-flow-body { min-height: 0; }
+  .th-rail-steps { grid-template-columns: repeat(4, auto); justify-content: space-between; gap: 4px; }
+  .th-rail-steps li span:last-child { display: none; }
+  .th-rail-steps .is-now span:last-child { display: block; }
+  .th-review-row { grid-template-columns: 1fr; }
+  .th-actions { flex-direction: column-reverse; align-items: stretch; }
+  .th-actions .th-button { width: 100%; }
+}
+
+/* Painel elevado: base do assistente e das telas de escolha. */
+.th-panel {
+  position: relative;
+  border: 1px solid #2b3037;
+  border-radius: var(--r-panel);
+  background: radial-gradient(120% 80% at 50% -10%, #ffffff0a, transparent 60%), var(--panel);
+  box-shadow: 0 1px 0 #ffffff10 inset, 0 30px 70px -28px #000000b3;
+}
+
+.techhelp-site{--bg:#101113;--panel:#191b1f;--signal:#ff8b4d;--ink:#f3f0e9;--line:#33363c;--display:'Segoe UI',Arial,sans-serif;--text:'Segoe UI',Arial,sans-serif}
+.hx-stage{background:radial-gradient(ellipse at 84% 40%,#6d301b38,transparent 57%)}
+.hx-stage-inner{min-height:690px;padding-top:85px;padding-bottom:38px;justify-items:start}
+.hx-title{font-size:clamp(42px,5.7vw,78px);max-width:760px;line-height:1.05;letter-spacing:-.055em}
+.hx-stage .th-lead{max-width:510px;font-size:19px;margin:28px 0 36px}
+.hx-canvas-wrap,.hx-canvas-hit{width:48%;height:80%;top:0;right:0}
+.hx-canvas-wrap{z-index:0}.hx-canvas-hit{pointer-events:none}.hx-scrim{display:none}
+.hx-command{width:100%;margin-top:45px;background:#191b1fe8;border-color:#44454b}
+.hx-soft{color:#b6b4b0}.hx-explorer{padding-block:110px}.hx-explorer-head{max-width:620px}
+.hx-row{transition:background .2s,transform .2s,border-color .2s}.hx-row:hover{transform:translateX(5px)}
+.hx-figure svg{animation:diagram-appear .4s ease both}.hx-figure{background:radial-gradient(ellipse at top right,#ff8b4d0d,transparent),#191b1f}
+@keyframes diagram-appear{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.journey{height:320vh;background:#17191d;border-block:1px solid #37383c;position:relative;color:#f3f0e9}
+.journey-pin{height:100svh;min-height:570px;position:sticky;top:0;display:flex;align-items:center;overflow:hidden}
+.journey-pin>.th-inner{width:100%;position:relative}
+.journey h2{font-size:clamp(40px,5vw,64px);letter-spacing:-.055em;line-height:1;margin:0 0 clamp(76px,10vh,118px)}
+.journey-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:clamp(34px,5vw,78px);align-items:start;min-height:215px}
+.journey-step{position:relative;opacity:0;transform:translateY(10px);transition:opacity .42s ease,transform .55s cubic-bezier(.16,1,.3,1)}
+.journey-step.revealed{opacity:1;transform:none}
+.journey-step>strong{display:block;font-size:clamp(50px,5vw,72px);line-height:1;letter-spacing:-.065em;margin-bottom:32px;color:#ff8b4d}
+.journey-step h3{font-size:clamp(17px,1.55vw,21px);line-height:1.25;letter-spacing:-.025em;margin-bottom:12px}
+.journey-step p{font-size:14px;line-height:1.55;color:#b9b7b2;margin:0;max-width:26ch}
+.journey-connector{position:absolute;top:32px;right:calc(100% + 12px);width:calc(clamp(34px,5vw,78px) - 24px);height:10px;transform:translateX(50%)}
+.journey-connector i{position:absolute;left:0;top:4px;width:100%;height:2px;background:#ff8b4d;transform-origin:left;animation:journey-line .45s ease both}
+.journey-connector b{position:absolute;right:-6px;top:-11px;color:#ffb07f;font-size:22px;font-weight:400;animation:journey-signal .65s cubic-bezier(.16,1,.3,1) both}
+.journey-hint{margin:48px 0 0;color:#92949a;font-size:12px}.journey-disclaimer{margin:10px 0 0;color:#6f7178;font-size:10px}
+@keyframes journey-line{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes journey-signal{from{opacity:0;right:calc(100% - 6px);transform:rotate(0)}to{opacity:1;right:-6px;transform:rotate(90deg)}}
+.journey-confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}.journey-confetti i{position:absolute;left:var(--x);top:48%;width:6px;height:9px;background:#ff8b4d;animation:celebrate 1.5s var(--delay) ease-out both}.journey-confetti i:nth-child(3n){background:#f3f0e9}@keyframes celebrate{0%{opacity:0;transform:translateY(35px) rotate(0)}15%{opacity:1}100%{opacity:0;transform:translateY(-190px) rotate(var(--turn))}}
+.journey-static{height:auto}.journey-static .journey-pin{height:auto;min-height:0;position:relative;padding:90px 0}.journey-static .journey-step{opacity:1;transform:none}
+.hx-rental{padding-block:105px}.hx-rental .th-h2{max-width:540px}.hx-rental-top{gap:60px}.th-flow{animation:diagram-appear .32s ease both}.th-option{transition:background .2s,border-color .2s,transform .2s}.th-option:has(input:checked){transform:translateX(3px)}
+.journey-static{height:auto}.journey-static .journey-pin{height:auto;min-height:0;position:relative;padding:70px 0}.journey-static .journey-panels{height:auto}.journey-static .journey-panel{position:relative;opacity:1;visibility:visible;transform:none;padding:30px 0}.journey-static .journey-track{display:none}
+@media(max-width:700px){
+.hx-stage-inner{min-height:730px;padding-top:48px}.hx-title{font-size:46px}.hx-stage .th-lead{font-size:17px;max-width:90%}.hx-canvas-wrap{width:72%;height:300px;top:220px;right:-12%;opacity:.4}.hx-command{margin-top:95px}.hx-explorer{padding-block:68px}
+.journey{height:300vh}.journey-pin{min-height:560px;align-items:flex-start;padding-top:80px}.journey h2{font-size:38px;margin-bottom:54px}.journey-steps{grid-template-columns:1fr;gap:22px;min-height:355px}.journey-step{display:grid;grid-template-columns:58px 1fr;column-gap:16px}.journey-step>strong{grid-row:1/3;font-size:38px;margin:0}.journey-step h3{font-size:18px;margin:2px 0 5px}.journey-step p{font-size:13px;max-width:32ch}.journey-connector{left:17px;right:auto;top:-25px;width:2px;height:24px;transform:none}.journey-connector i{width:2px;height:100%;top:0}.journey-connector b{display:none}.journey-hint{margin-top:26px}.journey-disclaimer{max-width:35ch}.journey-static{height:auto}.journey-static .journey-pin{padding:70px 0}.hx-rental-top{gap:24px}.pv-bar-inner{padding-block:8px}.pv-bar p{font-size:11px}.pv-modes button{min-height:32px;font-size:11px}}
+@media(prefers-reduced-motion:reduce){.journey{height:auto}.journey-pin{position:relative;height:auto;min-height:0;padding:80px 0}.journey-step{opacity:1;transform:none}.journey-connector i,.journey-connector b{animation:none}.journey-confetti{display:none}}
+.journey-step:not(.revealed) .journey-connector i,.journey-step:not(.revealed) .journey-connector b{animation:none}
+.rent-v2{padding:68px 0;background:#211b17;border-block:1px solid #403128}.rent-layout{display:grid;grid-template-columns:1.05fr 1fr;gap:64px;align-items:center}.section-label{font-size:11px;letter-spacing:.12em;color:#ffb488;display:block;margin-bottom:20px}.rent-v2 h2,.pro-v2 h2{font-size:clamp(32px,3.5vw,48px);line-height:1.08;letter-spacing:-.045em}.rent-v2 p,.pro-invite>p{font-size:17px;line-height:1.6;color:#c4c1bb;max-width:48ch;margin:24px 0}.rent-v2 .rent-explanation{font-size:14px;color:#aaa59f;margin:0 0 24px}.rent-v2 small,.pro-invite>small{display:block;font-size:12px;color:#aaa59f;margin-top:12px}.rent-art{margin:0}.rent-art svg{display:block;width:100%;max-height:270px}.rent-art figcaption{display:flex;gap:22px;justify-content:space-around;font-size:12px;color:#e3d4c9;margin-top:4px}.rent-art>small{text-align:center;font-size:10px;color:#a99a8e}.pro-v2{padding:90px 0;background:#101113}.pro-layout{display:grid;grid-template-columns:1.15fr 1fr;gap:100px;align-items:center}.pro-benefits{border-left:1px solid #37393e;padding-left:40px}.pro-benefits>div{position:relative;padding:0 0 25px 32px;margin-bottom:24px;border-bottom:1px solid #292c31}.pro-benefits>div:last-child{margin:0;padding-bottom:0;border:0}.pro-benefits span{position:absolute;left:0;top:3px;font-size:11px;color:#ff8b4d}.pro-benefits h3{font-size:19px;letter-spacing:-.02em}.pro-benefits p{font-size:14px;color:#aeb0b5;margin:8px 0 0;max-width:37ch}
+@media(max-width:760px){.rent-v2{padding:48px 0}.rent-layout,.pro-layout{grid-template-columns:1fr;gap:32px}.rent-art svg{max-height:220px}.rent-art figcaption{font-size:11px}.pro-v2{padding:58px 0}.pro-benefits{padding-left:0;border:0}.pro-invite .th-button{width:100%;justify-content:center}.rent-v2 h2,.pro-v2 h2{font-size:36px}}
+@media(max-height:650px) and (min-width:701px){.journey-pin{min-height:0}.journey h2{margin-bottom:48px}.journey-hint{margin-top:18px}}
+/* Movimento vinculado à distância rolada, sem animação automática. */
+.journey-steps{position:relative}.journey-step,.journey-step.revealed{transform:none}.journey-step>strong{width:fit-content}.journey-scroll-art{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}.journey-scroll-lines line{stroke:#ffad77;stroke-width:2;stroke-linecap:round}.journey-scroll-star{fill:#ffb488;font-size:26px}.rent-v2 .th-button,.pro-v2 .th-button{width:fit-content;max-width:100%;height:auto;min-height:48px;line-height:1.35;white-space:normal;text-align:center;gap:12px}.rent-v2 .th-button svg,.pro-v2 .th-button svg{width:20px;height:20px;min-width:20px;flex:0 0 20px;display:block}.rent-v2 .th-button span,.pro-v2 .th-button span{min-width:0}
+@media(max-width:700px){.journey-scroll-star{font-size:18px}.pro-v2 .th-button{width:100%}}
+
+/* Cabeçalho persistente e espaço para os destinos dos links. */
+.th-header{position:sticky;top:0;z-index:100;background:#101113f5;border-bottom:1px solid #303238;backdrop-filter:blur(12px)}
+.th-header-inner{height:76px;min-height:76px}.th-brand{font-size:25px;letter-spacing:-.04em}.th-mark{width:27px;height:27px}
+.th-mobile-nav{position:sticky;top:76px;z-index:99;max-height:calc(100svh - 76px);overflow-y:auto}
+.techhelp-site section[id]{scroll-margin-top:92px}
+.journey-pin{top:76px;height:calc(100svh - 76px);min-height:0}
+@media(max-width:700px){.th-brand{font-size:23px}.journey-pin{padding-top:35px}.journey h2{margin-bottom:30px}.journey-steps{gap:18px;min-height:330px}.journey-hint{margin-top:18px}}
+.journey-static .journey-pin{top:auto;height:auto}
+@media(prefers-reduced-motion:reduce){.journey-pin{top:auto;height:auto}}
+
+</style>
+</head>
+<body>
+<div id="app" class="techhelp-site"></div>
+<script>
+// Regras do formulário, separadas do visual para serem fáceis de testar.
+                                                     
+                                             
+                        
+             
+                            
+                  
+                                           
+               
+                  
+               
+                   
+                  
+ 
+                                                                           
+const stages = ['Seu problema', 'Atendimento', 'Detalhes', 'Revisão'];
+const urgencies = ['Preciso resolver hoje', 'Próximos dias', 'Sem urgência'];
+const draftKey = 'techhelp-preview-integrada-draft';
+const emptyDraft = ()        => ({ version: 1, categoryId: null, area: '', branches: {}, mode: '', urgency: '', city: '', district: '', details: '' });
+const answersFor = (draft       )          => draft.area ? draft.branches[draft.area] ?? {} : {};
+
+function areaFor(name        )              {
+  return (['Hardware', 'Redes', 'Software']         ).find(area => area.toLowerCase() === name.trim().toLowerCase()) ?? null;
+}
+
+function questionsFor(draft       )             {
+  const a = answersFor(draft);
+  const questions             = [];
+  const add = (key        , title        , options          ) => questions.push({ key, title, options });
+  if (draft.area === 'Hardware') {
+    add('equipment', 'Qual equipamento precisa de ajuda?', ['Notebook', 'Computador de mesa', 'Outro', 'Não sei']);
+    if (a.equipment) add('problem', 'O que está acontecendo?', ['Não liga', 'Liga, mas não apresenta imagem', 'Está muito lento', 'Superaquece', 'Tela quebrada', 'Problema de bateria', 'Problema de carregamento', 'Outro', 'Não sei identificar']);
+    if (a.problem) add('brand', 'Você sabe a marca?', ['Dell', 'Lenovo', 'Acer', 'ASUS', 'Samsung', 'Apple', 'Outra', 'Não sei']);
+    if (a.brand && a.problem === 'Está muito lento') add('access', 'Você consegue usar o equipamento e acessar a internet?', ['Sim', 'Não', 'Não sei']);
+  }
+  if (draft.area === 'Redes') {
+    add('context', 'Onde você precisa de ajuda?', ['Casa', 'Empresa']);
+    if (a.context) add('problem', 'O que você precisa resolver?', ['Internet lenta', 'Sem conexão', 'Sinal ruim em alguns lugares', 'Instalar ou organizar cabos', 'Configurar equipamento de rede', 'Outro', 'Não sei']);
+    if (a.problem === 'Configurar equipamento de rede') add('device', 'Qual equipamento?', ['Roteador / Wi-Fi', 'Switch', 'Outro', 'Não sei']);
+    else if (a.problem === 'Instalar ou organizar cabos') add('scope', 'O que precisa ser feito?', ['Instalar novos pontos', 'Reparar cabos existentes', 'Organizar a rede', 'Não sei']);
+    else if (a.problem) add('scope', 'Isso acontece em quais aparelhos?', ['Em um aparelho', 'Em vários aparelhos', 'Em todos', 'Não sei']);
+    if ((a.scope || a.device) && !['Sem conexão', 'Instalar ou organizar cabos', 'Sinal ruim em alguns lugares'].includes(a.problem)) {
+      add('access', 'Você consegue usar algum computador com internet para receber ajuda?', ['Sim', 'Não', 'Não sei']);
+    }
+  }
+  if (draft.area === 'Software') {
+    add('problem', 'O que você precisa fazer?', ['Instalar ou configurar um programa', 'Resolver erro em um programa', 'Atualizar drivers', 'Fazer backup', 'Recuperar arquivos', 'Remover vírus ou malware', 'Formatar ou reinstalar o sistema', 'Outro', 'Não sei']);
+    if (a.problem) add('system', 'Qual sistema você usa?', ['Windows', 'Linux', 'macOS', 'Outro', 'Não sei']);
+    if (a.system && a.problem === 'Recuperar arquivos') add('files', 'O que aconteceu com os arquivos?', ['Foram apagados', 'O dispositivo não abre ou faz ruídos', 'Não sei']);
+    if (a.system && a.problem === 'Fazer backup') add('backup', 'Você já tem onde guardar a cópia?', ['Disco externo', 'Conta na nuvem', 'Preciso de orientação', 'Não sei']);
+    if (a.system && (!['Recuperar arquivos', 'Fazer backup'].includes(a.problem) || a.files || a.backup)) {
+      add('access', 'O computador pode ser usado e tem acesso à internet?', ['Sim', 'Não', 'Não sei']);
+    }
+  }
+  return questions;
+}
+
+function remoteAllowed(draft       )          {
+  const a = answersFor(draft);
+  if (a.access !== 'Sim') return false;
+  if (draft.area === 'Hardware') return a.problem === 'Está muito lento';
+  if (draft.area === 'Software') return a.problem !== 'Formatar ou reinstalar o sistema' && a.files !== 'O dispositivo não abre ou faz ruídos';
+  return draft.area === 'Redes' && !['Sem conexão', 'Instalar ou organizar cabos', 'Sinal ruim em alguns lugares'].includes(a.problem);
+}
+
+function selectAnswer(draft       , key        , value        )        {
+  if (!draft.area) return draft;
+  const questions = questionsFor(draft);
+  const index = questions.findIndex(question => question.key === key);
+  if (index < 0 || !questions[index].options.includes(value)) return draft;
+  const answers = { ...answersFor(draft) };
+  if (answers[key] === value) return draft;
+  // Uma nova escolha invalida só as respostas que dependem dela.
+  delete answers[key + 'Text'];
+  for (const question of questions.slice(index + 1)) {
+    delete answers[question.key];
+    delete answers[question.key + 'Text'];
+  }
+  if (key === 'problem') delete answers.programText;
+  answers[key] = value;
+  return { ...draft, branches: { ...draft.branches, [draft.area]: answers }, mode: '' };
+}
+
+function validateStage(draft       , stage        )                {
+  const questions = questionsFor(draft);
+  const answers = answersFor(draft);
+  if (stage === 0 && (!draft.categoryId || !questions.length || questions.some(q => !q.options.includes(answers[q.key])))) {
+    return 'Escolha uma resposta para cada pergunta. “Não sei” também vale.';
+  }
+  if (stage === 1) {
+    if (!['Presencial', 'Remoto'].includes(draft.mode) || (draft.mode === 'Remoto' && !remoteAllowed(draft))) return 'Escolha uma forma de atendimento disponível para seu relato.';
+    if (!urgencies.includes(draft.urgency)) return 'Informe quando você precisa de ajuda.';
+    if (draft.mode === 'Presencial' && (!draft.city.trim() || !draft.district.trim())) return 'Informe cidade/UF e bairro para o atendimento presencial.';
+  }
+  return null;
+}
+
+// O armazenamento do navegador pode conter dados antigos ou inválidos.
+function parseDraft(raw               )        {
+  try {
+    const value = JSON.parse(raw ?? 'null');
+    if (!value || value.version !== 1) return emptyDraft();
+    const area = typeof value.area === 'string' ? areaFor(value.area) : null;
+    const unassigned = value.area === '' && value.categoryId === null;
+    if (!unassigned && (!area || !Number.isSafeInteger(value.categoryId) || value.categoryId <= 0)) return emptyDraft();
+    const draft = emptyDraft();
+    draft.area = area ?? '';
+    draft.categoryId = value.categoryId;
+    for (const field of ['mode', 'urgency', 'city', 'district', 'details']         ) {
+      draft[field] = typeof value[field] === 'string' ? value[field].slice(0, field === 'details' ? 3000 : 120) : '';
+    }
+    for (const area of ['Hardware', 'Redes', 'Software']         ) {
+      const source = value.branches?.[area];
+      if (!source || typeof source !== 'object' || Array.isArray(source)) continue;
+      const answers          = {};
+      const allowedKeys = ['equipment', 'problem', 'brand', 'access', 'context', 'device', 'scope', 'system', 'files', 'backup'];
+      for (const key of [...allowedKeys, ...allowedKeys.map(k => k + 'Text'), 'programText']) {
+        if (typeof source[key] === 'string') answers[key] = source[key].slice(0, 160);
+      }
+      draft.branches[area] = answers;
+    }
+    return draft;
+  } catch { return emptyDraft(); }
+}
+
+
+/**
+ * Conversão entre o rascunho da interface e o contrato real de
+ * POST /solicitacoes (CriarSolicitacaoRequest).
+ *
+ * Esta camada existe para que o formulário nunca invente nomes de campo.
+ * Ela é pura e testável, e HOJE NÃO É USADA PARA ENVIAR NADA: a publicação
+ * depende de autenticação, que não existe nesta entrega. O `idCliente` tem de
+ * vir da identidade autenticada — nunca de um valor fixo no frontend.
+ *
+ * O mesmo resumo alimenta a tela de revisão, então o que a pessoa confere é
+ * exatamente o que seria enviado.
+ */
+
+                                     
+                    
+                      
+                 
+                    
+                                           
+                                        
+ 
+
+                           
+                                             
+                                  
+
+                                                            
+
+/** Rótulos legíveis para cada resposta do fluxo. */
+const labels                         = {
+  equipment: 'Equipamento',
+  problem: 'Problema relatado',
+  brand: 'Marca',
+  access: 'Consegue usar o equipamento com internet',
+  context: 'Local',
+  device: 'Equipamento de rede',
+  scope: 'Abrangência',
+  system: 'Sistema',
+  files: 'Situação dos arquivos',
+  backup: 'Onde guardar a cópia',
+};
+
+const problemLabel                       = {
+  Hardware: 'Problema relatado',
+  Redes: 'Necessidade',
+  Software: 'Necessidade',
+};
+
+/**
+ * Mapeamento de urgência. CANDIDATO, AINDA A VALIDAR como regra de produto.
+ * "Hoje" vira ALTA e nunca EMERGENCIA: a plataforma não promete disponibilidade.
+ */
+const urgencyMap                                              = {
+  'Preciso resolver hoje': 'ALTA',
+  'Próximos dias': 'NORMAL',
+  'Sem urgência': 'BAIXA',
+};
+
+function lowerFirst(text        )         {
+  return text ? text[0].toLowerCase() + text.slice(1) : text;
+}
+
+function withExtra(answers         , key        )         {
+  const value = answers[key] ?? '';
+  const extra = (answers[key + 'Text'] ?? '').trim();
+  return extra ? `${value} — ${extra}` : value;
+}
+
+/** Título legível a partir das respostas visíveis. Máximo de 160 caracteres. */
+function buildTitle(draft       )         {
+  const a = answersFor(draft);
+  const known = (value         ) => (value && !value.startsWith('Não sei') && value !== 'Outro' && value !== 'Outra' ? value : '');
+  let title = '';
+
+  if (draft.area === 'Hardware') {
+    const parts = [known(a.equipment), known(a.brand)].filter(Boolean).join(' ');
+    title = parts ? `${parts} ${lowerFirst(a.problem ?? '')}`.trim() : (a.problem ?? '');
+  } else if (draft.area === 'Redes') {
+    const local = known(a.context);
+    title = local ? `Rede em ${local.toLowerCase()}: ${lowerFirst(a.problem ?? '')}` : `Rede: ${lowerFirst(a.problem ?? '')}`;
+  } else if (draft.area === 'Software') {
+    const system = known(a.system);
+    title = system ? `${a.problem ?? ''} (${system})` : (a.problem ?? '');
+  }
+
+  title = title.replace(/\s+/g, ' ').trim();
+  if (!title) title = draft.area || 'Pedido de atendimento';
+  return title.length > 160 ? title.slice(0, 157).trimEnd() + '…' : title;
+}
+
+/**
+ * Resumo do pedido, na ordem em que as perguntas apareceram.
+ * Só considera as perguntas visíveis, então uma resposta antiga escondida
+ * nunca vaza para a descrição.
+ */
+function summarizeDraft(draft       )               {
+  const a = answersFor(draft);
+  const rows               = [];
+
+  for (const question of questionsFor(draft)) {
+    const value = withExtra(a, question.key);
+    if (!value) continue;
+    const label = question.key === 'problem' && draft.area ? problemLabel[draft.area] : labels[question.key] ?? question.title;
+    rows.push({ label, value });
+  }
+
+  const program = (a.programText ?? '').trim();
+  if (program) rows.push({ label: 'Programa', value: program });
+
+  if (draft.mode) rows.push({ label: 'Atendimento', value: draft.mode });
+  if (draft.urgency) rows.push({ label: 'Urgência informada', value: draft.urgency });
+
+  if (draft.mode === 'Presencial') {
+    const region = [draft.city.trim(), draft.district.trim()].filter(Boolean).join(' — ');
+    if (region) rows.push({ label: 'Região informada', value: region });
+  }
+
+  const details = draft.details.trim();
+  if (details) rows.push({ label: 'Detalhes', value: details });
+
+  return rows;
+}
+
+/** Descrição estruturada em texto, a partir do mesmo resumo da revisão. */
+function buildDescricao(draft       )         {
+  return summarizeDraft(draft)
+    .map(row => `${row.label}: ${row.value}`)
+    .join('\n');
+}
+
+/**
+ * Monta o corpo de POST /solicitacoes.
+ *
+ * Cidade e bairro digitados NÃO são um idEndereco: o campo é omitido de
+ * propósito. Ligar endereço estruturado exige decisão separada, porque o
+ * backend valida se o endereço pertence ao usuário do cliente.
+ */
+function toSolicitacaoPayload(draft       , idCliente        )                {
+  if (!Number.isSafeInteger(idCliente) || idCliente <= 0) {
+    return { ok: false, reason: 'Sem cliente autenticado para enviar o pedido.' };
+  }
+  if (!draft.area || !draft.categoryId) {
+    return { ok: false, reason: 'Escolha uma área de atendimento.' };
+  }
+  const tipo = draft.mode === 'Presencial' ? 'PRESENCIAL' : draft.mode === 'Remoto' ? 'REMOTO' : null;
+  if (!tipo) {
+    return { ok: false, reason: 'Escolha uma forma de atendimento.' };
+  }
+  const urgencia = urgencyMap[draft.urgency];
+  if (!urgencia) {
+    return { ok: false, reason: 'Informe quando você precisa de ajuda.' };
+  }
+  const descricao = buildDescricao(draft);
+  if (!descricao.trim()) {
+    return { ok: false, reason: 'Responda as perguntas do pedido antes de publicar.' };
+  }
+
+  return {
+    ok: true,
+    payload: {
+      idCliente,
+      idCategoria: draft.categoryId,
+      titulo: buildTitle(draft),
+      descricao,
+      tipoAtendimento: tipo,
+      urgencia,
+    },
+  };
+}
+
+
+/**
+ * Campo de módulos: uma placa desenhada como centenas de peças quadradas.
+ * Perto do ponteiro as peças se afastam, giram e perdem opacidade; ao sair,
+ * voltam ao lugar por mola. Na carga, elas entram espalhadas e se juntam.
+ *
+ * Canvas 2D puro, sem biblioteca. A imagem é gerada a partir de uma máscara
+ * desenhada fora da tela, então a forma é autoral e não depende de asset.
+ *
+ * É melhoria opcional: se algo falhar, o chamador continua com a página
+ * inteira funcionando — nenhum conteúdo ou controle vive aqui dentro.
+ */
+
+                               
+                                                       
+                  
+ 
+
+                              
+                      
+                                     
+ 
+
+                  
+                                                
+                                            
+                         
+                            
+               
+                                                          
+ 
+
+const STEP = 13;            // distância entre módulos, em px de CSS
+const RADIUS = 75.2;          // área de influência 20% menor que a primeira prévia
+const MAX_DPR = 2;
+
+const TONES = [
+  'rgba(58,64,72,ALPHA)',
+  'rgba(120,128,138,ALPHA)',
+  'rgba(255,122,51,ALPHA)',
+];
+
+/** Desenha a placa na máscara. Cada tom de cinza vira um tom de módulo. */
+function drawMask(ctx                          , w        , h        ) {
+  ctx.clearRect(0,0,w,h);
+  const x=w*.16,y=h*.23,bw=w*.69,bh=h*.44;
+  ctx.fillStyle='#8a8a8a';ctx.fillRect(x,y,bw,bh);
+  ctx.clearRect(x+15,y+13,bw-30,bh-28);
+  ctx.fillStyle='#3a3a3a';ctx.fillRect(x+26,y+26,bw-52,bh-52);
+  ctx.fillStyle='#ffffff';ctx.fillRect(x+bw*.17,y+bh*.3,bw*.22,10);ctx.fillRect(x+bw*.17,y+bh*.45,bw*.47,10);
+  ctx.fillStyle='#8a8a8a';ctx.fillRect(x+bw*.17,y+bh*.6,bw*.33,10);
+  ctx.beginPath();ctx.moveTo(x,y+bh+12);ctx.lineTo(x+bw,y+bh+12);ctx.lineTo(x+bw+30,y+bh+45);ctx.lineTo(x-30,y+bh+45);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#ffffff';ctx.fillRect(x+bw*.4,y+bh+16,bw*.2,8);
+}
+
+function createModuleField(canvas                   , options               = {})              {
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return { destroy: () => {}, setStill: () => {} };
+
+  let still = Boolean(options.still);
+  let modules           = [];
+  let width = 0;
+  let height = 0;
+  let dpr = 1;
+  let frame = 0;
+  let running = false;
+  let visible = true;
+  let entrance = 0;           // 0 a 1
+  let pointer = { x: -9999, y: -9999, active: false };
+  const target = { x: -9999, y: -9999 };
+
+  function build() {
+    const rect = canvas.getBoundingClientRect();
+    width = Math.max(1, Math.round(rect.width));
+    height = Math.max(1, Math.round(rect.height));
+    dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const mask = document.createElement('canvas');
+    mask.width = width;
+    mask.height = height;
+    const mctx = mask.getContext('2d', { willReadFrequently: true });
+    if (!mctx) return;
+    drawMask(mctx, width, height);
+    const data = mctx.getImageData(0, 0, width, height).data;
+
+    modules = [];
+    for (let y = STEP / 2; y < height; y += STEP) {
+      for (let x = STEP / 2; x < width; x += STEP) {
+        const index = ((y | 0) * width + (x | 0)) * 4;
+        if (data[index + 3] < 120) continue;
+        const level = data[index];
+        const tone = level > 200 ? 2 : level > 100 ? 1 : 0;
+        modules.push({
+          hx: x, hy: y, x, y, vx: 0, vy: 0, rot: 0, vrot: 0,
+          size: tone === 2 ? STEP - 3 : STEP - 4.5,
+          tone,
+        });
+      }
+    }
+
+    if (still || entrance >= 1) {
+      entrance = 1;
+      for (const m of modules) { m.x = m.hx; m.y = m.hy; }
+    } else {
+      for (const m of modules) {
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 60 + Math.random() * 220;
+        m.x = m.hx + Math.cos(angle) * distance;
+        m.y = m.hy + Math.sin(angle) * distance;
+        m.rot = (Math.random() - 0.5) * 1.6;
+      }
+    }
+  }
+
+  function paint() {
+    ctx.clearRect(0, 0, width, height);
+    for (const m of modules) {
+      const offset = Math.hypot(m.x - m.hx, m.y - m.hy);
+      const alpha = Math.max(0.12, Math.min(1, entrance - offset / 320));
+      if (alpha <= 0.05) continue;
+      const shrink = Math.min(0.55, offset / 260);
+      const size = m.size * (1 - shrink);
+      ctx.save();
+      ctx.translate(m.x, m.y);
+      if (m.rot) ctx.rotate(m.rot);
+      ctx.fillStyle = TONES[m.tone].replace('ALPHA', alpha.toFixed(3));
+      ctx.fillRect(-size / 2, -size / 2, size, size);
+      ctx.restore();
+    }
+  }
+
+  function step() {
+    frame = 0;
+    if (!visible) { running = false; return; }
+
+    if (entrance < 1) entrance = Math.min(1, entrance + 0.022);
+
+    // O ponteiro persegue o alvo: a reação acompanha o movimento com atraso.
+    if (pointer.active) {
+      pointer.x += (target.x - pointer.x) * 0.22;
+      pointer.y += (target.y - pointer.y) * 0.22;
+    }
+
+    let moving = entrance < 1;
+    for (const m of modules) {
+      if (pointer.active) {
+        const dx = m.hx - pointer.x;
+        const dy = m.hy - pointer.y;
+        const distance = Math.hypot(dx, dy);
+        if (distance < RADIUS) {
+          const force = (1 - distance / RADIUS) ** 2 * 5.4;
+          const nx = distance < 0.001 ? 0 : dx / distance;
+          const ny = distance < 0.001 ? 0 : dy / distance;
+          m.vx += nx * force;
+          m.vy += ny * force;
+          m.vrot += (nx - ny) * force * 0.02;
+        }
+      }
+      // mola de volta ao lugar
+      m.vx += (m.hx - m.x) * 0.055;
+      m.vy += (m.hy - m.y) * 0.055;
+      m.vrot += -m.rot * 0.08;
+      m.vx *= 0.82;
+      m.vy *= 0.82;
+      m.vrot *= 0.8;
+      m.x += m.vx;
+      m.y += m.vy;
+      m.rot += m.vrot;
+      if (!moving && (Math.abs(m.vx) > 0.02 || Math.abs(m.vy) > 0.02 || Math.abs(m.x - m.hx) > 0.2 || Math.abs(m.y - m.hy) > 0.2)) {
+        moving = true;
+      }
+    }
+
+    paint();
+
+    // Sem ponteiro e tudo no lugar: para de consumir quadros.
+    if (moving || pointer.active) frame = requestAnimationFrame(step);
+    else running = false;
+  }
+
+  function wake() {
+    if (still || running || !visible) return;
+    running = true;
+    frame = requestAnimationFrame(step);
+  }
+
+  function onPointerMove(event              ) {
+    if (still || event.pointerType === 'touch') return;
+    const rect = canvas.getBoundingClientRect();
+    target.x = event.clientX - rect.left;
+    target.y = event.clientY - rect.top;
+    if (!pointer.active) { pointer.x = target.x; pointer.y = target.y; }
+    pointer.active = true;
+    wake();
+  }
+
+  function onPointerLeave() {
+    pointer.active = false;
+    wake();
+  }
+
+  const host = canvas.closest('.hx-stage') ?? canvas;
+  host.addEventListener('pointermove', onPointerMove);
+  host.addEventListener('pointerleave', onPointerLeave);
+  host.addEventListener('pointercancel', onPointerLeave);
+
+  const observer = typeof IntersectionObserver === 'function'
+    ? new IntersectionObserver(entries => {
+        visible = entries.some(entry => entry.isIntersecting);
+        if (visible) wake();
+      }, { threshold: 0 })
+    : null;
+  observer?.observe(canvas);
+
+  function onVisibility() {
+    visible = !document.hidden;
+    if (visible) wake();
+  }
+  document.addEventListener('visibilitychange', onVisibility);
+
+  const resize = typeof ResizeObserver === 'function'
+    ? new ResizeObserver(() => { build(); if (still) paint(); else wake(); })
+    : null;
+  resize?.observe(canvas);
+
+  build();
+  if (still) paint();
+  else wake();
+
+  return {
+    destroy() {
+      cancelAnimationFrame(frame);
+      running = false;
+      host.removeEventListener('pointermove', onPointerMove);
+      host.removeEventListener('pointerleave', onPointerLeave);
+      host.removeEventListener('pointercancel', onPointerLeave);
+      document.removeEventListener('visibilitychange', onVisibility);
+      observer?.disconnect();
+      resize?.disconnect();
+      modules = [];
+    },
+    setStill(next         ) {
+      still = next;
+      if (still) {
+        cancelAnimationFrame(frame);
+        running = false;
+        entrance = 1;
+        for (const m of modules) { m.x = m.hx; m.y = m.hy; m.rot = 0; m.vx = 0; m.vy = 0; m.vrot = 0; }
+        paint();
+      } else {
+        wake();
+      }
+    },
+  };
+}
+
+
+/**
+ * Desenhos autorais em SVG, escritos como texto para serem usados tanto pelo
+ * React quanto pelo preview estático sem duplicar geometria.
+ *
+ * É conteúdo estático escrito aqui dentro: nada vem do usuário nem da API,
+ * então inseri-lo como markup não abre caminho para injeção.
+ */
+
+                                                                                                        
+
+function diagramKeyFor(nome        )             {
+  const value = nome.toLowerCase();
+  if (value.includes('hardware')) return 'hardware';
+  if (value.includes('rede')) return 'redes';
+  if (value.includes('software')) return 'software';
+  if (value.includes('segur')) return 'seguranca';
+  if (value.includes('servidor') || value.includes('cloud')) return 'servidores';
+  return 'perifericos';
+}
+
+const open = '<svg viewBox="0 0 400 250" role="img" aria-label="ESCAPE">';
+
+const bodies                                                   = {
+  hardware: {
+    alt: 'Computador de mesa aberto, com monitor, processador, memória e ventilação visíveis.',
+    art: `
+      <rect class="dg-plate" x="24" y="30" width="224" height="142" rx="12" stroke-width="2"/>
+      <rect class="dg-part" x="40" y="46" width="192" height="106" rx="5" stroke-width="1.5"/>
+      <path class="dg-line" d="M108 188h56m-28-16v16" stroke-width="5" stroke-linecap="round"/>
+      <rect class="dg-plate" x="280" y="28" width="88" height="190" rx="12" stroke-width="2"/>
+      <circle class="dg-part" cx="324" cy="79" r="25" stroke-width="2"/><circle class="dg-soft" cx="324" cy="79" r="8"/>
+      <rect class="dg-part" x="298" y="120" width="52" height="34" rx="5" stroke-width="2"/>
+      <rect class="dg-hot" x="304" y="128" width="20" height="18" rx="3"/>
+      <rect class="dg-soft" x="331" y="128" width="12" height="4" rx="2"/><rect class="dg-soft" x="331" y="138" width="12" height="4" rx="2"/>
+      <path class="dg-line-hot" d="M280 179h-24c-18 0-19-18-35-18h-30" stroke-width="3" stroke-linecap="round"/>
+      <rect class="dg-hot" x="48" y="57" width="60" height="7" rx="3"/><rect class="dg-soft" x="48" y="75" width="116" height="7" rx="3"/>`,
+  },
+  software: {
+    alt: 'Janela de software com código, menus, cursor e botão de execução.',
+    art: `
+      <rect class="dg-plate" x="28" y="24" width="344" height="204" rx="14" stroke-width="2"/>
+      <path class="dg-line" d="M28 58h344M112 58v170" stroke-width="2"/>
+      <circle class="dg-hot" cx="49" cy="41" r="5"/><circle class="dg-soft" cx="67" cy="41" r="5"/><circle class="dg-soft" cx="85" cy="41" r="5"/>
+      <rect class="dg-soft" x="47" y="79" width="45" height="7" rx="3"/><rect class="dg-soft" x="47" y="101" width="54" height="7" rx="3"/>
+      <rect class="dg-soft" x="47" y="123" width="38" height="7" rx="3"/><rect class="dg-hot" x="47" y="157" width="46" height="26" rx="6"/>
+      <path class="dg-line-hot" d="M147 92l-20 20 20 20M221 92l20 20-20 20" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+      <path class="dg-line" d="M190 82l-18 62" stroke-width="3"/>
+      <rect class="dg-soft" x="133" y="166" width="178" height="7" rx="3"/><rect class="dg-soft" x="133" y="187" width="122" height="7" rx="3"/>
+      <path class="dg-hot" d="M326 160l20 12-20 12z"/>`,
+  },
+  redes: {
+    alt: 'Roteador Wi-Fi conectando computador, celular e outros dispositivos.',
+    art: `
+      <path class="dg-line" d="M200 152 76 72M200 152 326 74M200 152 76 202M200 152 326 202" stroke-width="2" stroke-dasharray="6 7"/>
+      <path class="dg-line-hot" d="M200 152 326 74" stroke-width="3"/>
+      <rect class="dg-plate" x="136" y="148" width="128" height="52" rx="11" stroke-width="2"/>
+      <path class="dg-line" d="M154 148v-38M246 148v-38" stroke-width="4" stroke-linecap="round"/>
+      <circle class="dg-hot" cx="164" cy="175" r="5"/><circle class="dg-soft" cx="183" cy="175" r="5"/><circle class="dg-soft" cx="202" cy="175" r="5"/>
+      <path class="dg-line-hot" d="M174 128c14-13 38-13 52 0M184 116c9-8 23-8 32 0" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <rect class="dg-part" x="33" y="36" width="88" height="58" rx="7" stroke-width="2"/><path class="dg-line" d="M65 102h25M77 94v8" stroke-width="3"/>
+      <rect class="dg-part" x="304" y="37" width="42" height="75" rx="8" stroke-width="2"/><circle class="dg-hot" cx="325" cy="99" r="3"/>
+      <rect class="dg-part" x="36" y="180" width="80" height="50" rx="8" stroke-width="2"/><rect class="dg-part" x="292" y="178" width="72" height="52" rx="8" stroke-width="2"/>`,
+  },
+  seguranca: {
+    alt: 'Escudo digital com cadeado protegendo dispositivos conectados.',
+    art: `
+      <g class="dg-soft"><circle cx="60" cy="70" r="13"/><circle cx="340" cy="70" r="13"/><circle cx="61" cy="192" r="13"/><circle cx="339" cy="192" r="13"/></g>
+      <path class="dg-line" d="M73 70h65M262 70h65M74 192h64M262 192h64" stroke-width="2" stroke-dasharray="5 6"/>
+      <path class="dg-part" d="M200 20l76 28v62c0 54-36 91-76 112-40-21-76-58-76-112V48z" stroke-width="2"/>
+      <rect class="dg-hot" x="163" y="104" width="74" height="61" rx="9"/>
+      <path class="dg-line-hot" d="M177 104V88c0-31 46-31 46 0v16" stroke-width="8" fill="none" stroke-linecap="round"/>
+      <circle class="dg-plate" cx="200" cy="132" r="9"/><path class="dg-plate" d="M196 138h8v14h-8z"/>
+      <path class="dg-line-hot" d="M278 54l29-19M92 211l29-19" stroke-width="3"/>`,
+  },
+  servidores: {
+    alt: 'Rack de servidores conectado a uma nuvem por uma linha de dados.',
+    art: `
+      <rect class="dg-plate" x="32" y="24" width="174" height="202" rx="12" stroke-width="2"/>
+      <rect class="dg-part" x="48" y="43" width="142" height="38" rx="6" stroke-width="2"/><rect class="dg-part" x="48" y="91" width="142" height="38" rx="6" stroke-width="2"/>
+      <rect class="dg-part" x="48" y="139" width="142" height="38" rx="6" stroke-width="2"/><rect class="dg-part" x="48" y="187" width="142" height="24" rx="6" stroke-width="2"/>
+      <g class="dg-hot"><circle cx="65" cy="62" r="5"/><circle cx="65" cy="110" r="5"/><circle cx="65" cy="158" r="5"/></g>
+      <g class="dg-soft"><rect x="82" y="58" width="90" height="8" rx="4"/><rect x="82" y="106" width="72" height="8" rx="4"/><rect x="82" y="154" width="84" height="8" rx="4"/></g>
+      <path class="dg-line-hot" d="M206 125h39" stroke-width="3"/><circle class="dg-hot" cx="228" cy="125" r="5"/>
+      <path class="dg-part" d="M269 177h67c26 0 42-15 42-35 0-18-13-33-32-36-5-29-29-48-58-48-30 0-54 20-59 49-18 4-30 18-30 35 0 20 17 35 42 35z" stroke-width="2"/>
+      <path class="dg-line-hot" d="M256 130l20-19 18 19 25-25" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`,
+  },
+  perifericos: {
+    alt: 'Mesa de trabalho com impressora, teclado, mouse e monitor.',
+    art: `
+      <rect class="dg-plate" x="24" y="26" width="196" height="126" rx="11" stroke-width="2"/><rect class="dg-part" x="39" y="41" width="166" height="94" rx="5" stroke-width="1.5"/>
+      <path class="dg-line" d="M96 169h52m-26-17v17" stroke-width="5" stroke-linecap="round"/>
+      <path class="dg-part" d="M48 191h151l-10 30H36z" stroke-width="2"/><path class="dg-line" d="M62 202h112" stroke-width="2" stroke-dasharray="7 5"/>
+      <rect class="dg-part" x="257" y="87" width="112" height="93" rx="11" stroke-width="2"/><rect class="dg-plate" x="276" y="34" width="75" height="63" rx="5" stroke-width="2"/>
+      <rect class="dg-plate" x="276" y="164" width="75" height="62" rx="5" stroke-width="2"/><rect class="dg-hot" x="338" y="108" width="17" height="9" rx="3"/>
+      <path class="dg-soft" d="M223 186c17 0 27 14 27 31h-54c0-17 10-31 27-31z"/>
+      <path class="dg-line-hot" d="M48 60h62M48 78h105" stroke-width="6" stroke-linecap="round"/>`,
+  },
+};
+
+function diagramFor(key            )         {
+  const body = bodies[key];
+  return open.replace('ESCAPE', body.alt) + body.art + '</svg>';
+}
+
+/** Conjunto de ferramentas do aluguel, visto de cima como um kit montado. */
+const kitSvg = `
+<svg class="hx-kit" viewBox="0 0 1120 300" role="img" aria-label="Conjunto de ferramentas organizado sobre uma superfície: chave de fenda, jogo de chaves de precisão, alicate, testador de cabo, rolo de cabo e maleta.">
+  <rect class="kt-surface" x="6" y="6" width="1108" height="288" rx="18" stroke-width="1.5"/>
+  <g class="kt-hole"><rect x="34" y="34" width="1052" height="232" rx="12"/></g>
+
+  <g transform="translate(70 70)">
+    <rect class="kt-grip" x="0" y="26" width="34" height="86" rx="15"/>
+    <rect class="kt-grip-2" x="6" y="40" width="22" height="8" rx="4"/>
+    <rect class="kt-metal" x="12" y="112" width="10" height="78" rx="3"/>
+    <path class="kt-metal-dark" d="M12 190h10l-5 14z"/>
+  </g>
+
+  <g transform="translate(150 60)">
+    <rect class="kt-body" x="0" y="0" width="150" height="176" rx="10" stroke-width="1.5"/>
+    <g class="kt-hole">
+      <rect x="16" y="18" width="16" height="140" rx="8"/><rect x="42" y="18" width="16" height="140" rx="8"/>
+      <rect x="68" y="18" width="16" height="140" rx="8"/><rect x="94" y="18" width="16" height="140" rx="8"/>
+      <rect x="120" y="18" width="16" height="140" rx="8"/>
+    </g>
+    <g class="kt-metal">
+      <rect x="19" y="26" width="10" height="120" rx="5"/><rect x="45" y="26" width="10" height="120" rx="5"/>
+      <rect x="71" y="26" width="10" height="120" rx="5"/><rect x="97" y="26" width="10" height="120" rx="5"/>
+      <rect x="123" y="26" width="10" height="120" rx="5"/>
+    </g>
+    <g class="kt-grip-2">
+      <rect x="17" y="126" width="14" height="24" rx="6"/><rect x="43" y="126" width="14" height="24" rx="6"/>
+      <rect x="69" y="126" width="14" height="24" rx="6"/><rect x="95" y="126" width="14" height="24" rx="6"/>
+      <rect x="121" y="126" width="14" height="24" rx="6"/>
+    </g>
+  </g>
+
+  <g transform="translate(336 64)">
+    <path class="kt-metal-dark" d="M40 0c22 0 34 16 34 36v42l26 56-20 12-32-56H32L0 146l-20-12 26-56V36C6 16 18 0 40 0z" />
+    <rect class="kt-grip" x="4" y="138" width="26" height="76" rx="13" transform="rotate(-7 17 176)"/>
+    <rect class="kt-grip" x="48" y="138" width="26" height="76" rx="13" transform="rotate(7 61 176)"/>
+  </g>
+
+  <g transform="translate(520 72)">
+    <rect class="kt-body" x="0" y="0" width="130" height="156" rx="12" stroke-width="1.5"/>
+    <rect class="kt-hole" x="16" y="16" width="98" height="52" rx="6"/>
+    <rect class="kt-grip" x="26" y="34" width="46" height="8" rx="4"/>
+    <g class="kt-metal-dark">
+      <rect x="18" y="86" width="26" height="20" rx="4"/><rect x="52" y="86" width="26" height="20" rx="4"/>
+      <rect x="86" y="86" width="26" height="20" rx="4"/><rect x="18" y="114" width="26" height="20" rx="4"/>
+      <rect x="52" y="114" width="26" height="20" rx="4"/><rect x="86" y="114" width="26" height="20" rx="4"/>
+    </g>
+    <rect class="kt-metal" x="54" y="-16" width="22" height="18" rx="4"/>
+  </g>
+
+  <g transform="translate(700 64)">
+    <circle class="kt-body" cx="88" cy="88" r="86" stroke-width="1.5"/>
+    <circle class="kt-surface" cx="88" cy="88" r="56" stroke-width="1.5"/>
+    <circle class="kt-hole" cx="88" cy="88" r="22"/>
+    <path class="kt-grip" d="M88 2a86 86 0 0 1 72 39l-25 16A56 56 0 0 0 88 32z"/>
+    <path class="kt-metal-dark" d="M174 88a86 86 0 0 1-30 65l-18-23a56 56 0 0 0 20-42z"/>
+  </g>
+
+  <g transform="translate(900 72)">
+    <rect class="kt-body" x="0" y="20" width="176" height="136" rx="12" stroke-width="1.5"/>
+    <rect class="kt-body" x="62" y="0" width="52" height="24" rx="12" stroke-width="1.5"/>
+    <rect class="kt-hole" x="16" y="40" width="144" height="96" rx="8"/>
+    <g class="kt-surface" stroke-width="1.5" stroke-dasharray="6 5" fill="none">
+      <rect x="28" y="52" width="56" height="72" rx="6"/>
+      <rect x="92" y="52" width="56" height="72" rx="6"/>
+    </g>
+    <rect class="kt-grip" x="76" y="146" width="24" height="8" rx="4"/>
+  </g>
+</svg>`;
+
+
+/* ==========================================================================
+   Camada de tela do PREVIEW ESTÁTICO — composição "Do ruído à conexão".
+   As regras (flow, payload), o motor do canvas e os desenhos vêm dos mesmos
+   arquivos do projeto React, apenas sem os tipos. Só a renderização foi
+   reescrita em JavaScript puro, porque o preview não passa por build.
+   ========================================================================== */
+
+const ICONS = {
+  laptop: '<rect x="3" y="5" width="18" height="11" rx="2"/><path d="M1.5 19.5h21"/>',
+  network: '<circle cx="12" cy="5" r="2.6"/><circle cx="5" cy="19" r="2.6"/><circle cx="19" cy="19" r="2.6"/><path d="M12 7.6v4.4M5 16.4V12h14v4.4"/>',
+  appwindow: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/>',
+  shield: '<path d="M12 3.2 19 6v5.4c0 4.7-3.2 7.7-7 9-3.8-1.3-7-4.3-7-9V6z"/>',
+  printer: '<path d="M7 9V3.5h10V9"/><rect x="3.5" y="9" width="17" height="7" rx="2"/><path d="M7 14h10v6.5H7z"/>',
+  server: '<rect x="3" y="4" width="18" height="6.5" rx="2"/><rect x="3" y="13.5" width="18" height="6.5" rx="2"/><path d="M7 7.2h.01M7 16.8h.01"/>',
+  circlehelp: '<circle cx="12" cy="12" r="9"/><path d="M9.6 9.4a2.5 2.5 0 1 1 3.3 2.4c-.6.2-.9.8-.9 1.4v.5"/><path d="M12 17.1h.01"/>',
+  wrench: '<path d="M15.6 3.6a5 5 0 0 0-6 6.4l-6 6a2 2 0 0 0 2.8 2.8l6-6a5 5 0 0 0 6.4-6L16 7.3l-1.3-1.3z"/>',
+  check: '<path d="M4.5 12.5 9.5 17.5 19.5 6.5"/>',
+  arrowright: '<path d="M4 12h15M13 6l6 6-6 6"/>',
+  arrowleft: '<path d="M20 12H5M11 6l-6 6 6 6"/>',
+  send: '<path d="M21 3 10.5 13.5M21 3l-6.8 18-3.7-7.5L3 9.8z"/>',
+  bookmarkcheck: '<path d="M5.5 3.5h13v17l-6.5-4.5-6.5 4.5z"/><path d="M9 9.5l2.2 2.2 4-4"/>',
+  menu: '<path d="M3.5 7h17M3.5 12h17M3.5 17h17"/>',
+  x: '<path d="M5.5 5.5l13 13M18.5 5.5l-13 13"/>',
+  pause: '<path d="M8.5 4.5v15M15.5 4.5v15"/>',
+  play: '<path d="M7 4.5 19 12 7 19.5z"/>',
+  images: '<rect x="3" y="6" width="13" height="11" rx="2"/><path d="M8 20h11a2 2 0 0 0 2-2V9"/>',
+  badgecheck: '<path d="M12 3l2.2 1.7 2.7-.3 1 2.6 2.4 1.3-.8 2.7.8 2.7-2.4 1.3-1 2.6-2.7-.3L12 21l-2.2-1.7-2.7.3-1-2.6L3.7 15l.8-2.7-.8-2.7 2.4-1.3 1-2.6 2.7.3z"/><path d="M9 12l2 2 4-4"/>',
+  messagesquare: '<path d="M20.5 15.5a2 2 0 0 1-2 2H8l-4.5 3.5V5.5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/>',
+};
+
+function icon(name, extra) {
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra ? ' ' + extra : ''}>${ICONS[name] || ''}</svg>`;
+}
+
+function iconKey(nome) {
+  const value = nome.toLowerCase();
+  if (value.includes('hardware')) return 'laptop';
+  if (value.includes('rede')) return 'network';
+  if (value.includes('software')) return 'appwindow';
+  if (value.includes('segur')) return 'shield';
+  if (value.includes('impress') || value.includes('perif')) return 'printer';
+  return 'server';
+}
+
+// Cópia do script SQL do repositório. No produto isso é GET /categorias.
+// Existe só porque o preview estático não alcança http://localhost:8080.
+const SEED = [
+  { idCategoria: 1, nome: 'Hardware', descricao: 'Manutenção, montagem, diagnóstico e componentes físicos.', ativo: true },
+  { idCategoria: 2, nome: 'Software', descricao: 'Sistemas operacionais, programas, instalação e configuração.', ativo: true },
+  { idCategoria: 3, nome: 'Redes', descricao: 'Wi-Fi, cabeamento, roteadores, switches e infraestrutura de rede.', ativo: true },
+  { idCategoria: 4, nome: 'Segurança da Informação', descricao: 'Proteção de dispositivos, contas e ambientes digitais.', ativo: true },
+  { idCategoria: 5, nome: 'Servidores e Cloud', descricao: 'Servidores, virtualização, Linux, serviços e nuvem.', ativo: true },
+  { idCategoria: 6, nome: 'Impressoras e Periféricos', descricao: 'Instalação, configuração e manutenção de periféricos.', ativo: true },
+];
+
+function loadDraft() {
+  try { return parseDraft(sessionStorage.getItem(draftKey)); }
+  catch { return emptyDraft(); }
+}
+
+const state = {
+  screen: 'home',
+  menu: false,
+  paused: false,
+  stage: 0,
+  error: '',
+  notice: null,
+  catalogMode: 'ready',
+  activeArea: null,
+  draft: loadDraft(),
+  saved: (() => { try { return sessionStorage.getItem(draftKey) !== null; } catch { return false; } })(),
+};
+
+function catalog() {
+  if (state.catalogMode === 'loading') return { status: 'loading', categories: [] };
+  if (state.catalogMode === 'error') return { status: 'error', categories: [] };
+  if (state.catalogMode === 'empty') return { status: 'ready', categories: [] };
+  return { status: 'ready', categories: SEED.filter(c => c.ativo) };
+}
+
+function saveDraft(next) {
+  state.draft = next;
+  try { sessionStorage.setItem(draftKey, JSON.stringify(next)); state.saved = true; }
+  catch { state.saved = false; }
+}
+
+const esc = value => String(value ?? '').replace(/[&<>"']/g, c => (
+  { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+));
+
+const reduced = () => state.paused || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const BRAND_MARK = `<svg class="th-mark" viewBox="0 0 26 26" aria-hidden="true">
+  <rect class="th-mark-body" x="1" y="1" width="24" height="24" rx="7" stroke-width="1.5"/>
+  <path class="th-mark-line" d="M6.5 18 12 12.5 15.5 16" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle class="th-mark-signal" cx="18.5" cy="8.5" r="3"/>
+</svg>`;
+
+const NAV = [
+  ['servicos', 'Serviços', false],
+  ['como-funciona', 'Como funciona', false],
+  ['ferramentas', 'Aluguel de ferramentas', true],
+  ['profissionais', 'Sou profissional', false],
+];
+
+function header() {
+  return `<header class="th-header"><div class="th-inner th-header-inner">
+    <button type="button" class="th-brand" data-act="home" aria-label="TechHelp, ir para o início">${BRAND_MARK}TechHelp</button>
+    <nav class="th-nav" aria-label="Navegação principal">
+      ${NAV.map(([id, label, rental]) => `<button type="button" class="th-nav-link${rental ? ' th-nav-rental' : ''}" data-act="section" data-id="${id}">${rental ? icon('wrench') : ''}${label}</button>`).join('')}
+      <button type="button" class="th-button secondary" data-act="signin">Entrar</button>
+    </nav>
+    <button type="button" class="th-button secondary th-menu-toggle" aria-expanded="${state.menu}" aria-controls="menu-mobile" data-act="menu">
+      ${icon(state.menu ? 'x' : 'menu', 'width="18" height="18"')}${state.menu ? 'Fechar' : 'Menu'}
+    </button>
+  </div></header>
+  <nav id="menu-mobile" class="th-mobile-nav" aria-label="Menu"${state.menu ? '' : ' hidden'}><div class="th-inner">
+    ${NAV.map(([id, label, rental]) => `<button type="button" class="${rental ? 'th-nav-rental' : ''}" data-act="section" data-id="${id}">${rental ? icon('wrench') : ''}${label}</button>`).join('')}
+    <button type="button" data-act="signin">Entrar</button>
+  </div></nav>`;
+}
+
+function areaChips(withUnsure) {
+  const data = catalog();
+  if (data.status === 'loading') {
+    return '<div class="hx-state" role="status" aria-busy="true"><div class="hx-skeleton"></div><div class="hx-skeleton"></div><div class="hx-skeleton"></div></div>';
+  }
+  if (data.status === 'error') {
+    return `<div class="hx-state" role="alert">
+      <p><strong>As áreas não carregaram.</strong> O servidor do TechHelp não respondeu.</p>
+      <button type="button" class="th-button secondary" data-act="retry">Tentar novamente</button>
+    </div>`;
+  }
+  const ready = data.categories.filter(c => areaFor(c.nome));
+  if (!ready.length) {
+    return `<div class="hx-state" role="status">
+      <p><strong>Nenhuma área está ativa agora.</strong> O cadastro vem do servidor e aparece aqui assim que existir.</p>
+      <button type="button" class="th-button secondary" data-act="retry">Atualizar</button>
+    </div>`;
+  }
+  return `<div class="hx-chips">
+    ${ready.map(c => `<button type="button" class="hx-chip-btn" data-act="choose" data-id="${c.idCategoria}">${icon(iconKey(c.nome))}${esc(c.nome)}</button>`).join('')}
+    ${withUnsure ? `<button type="button" class="hx-chip-btn ghost" data-act="unsure">${icon('circlehelp')}Não sei dizer</button>` : ''}
+  </div>`;
+}
+
+function stageSection() {
+  const hasDraft = Boolean(state.draft.area) || Boolean(state.draft.details.trim());
+  return `<section class="hx-stage" aria-labelledby="hero-title">
+    <div class="hx-canvas-wrap" aria-hidden="true"><canvas id="hx-canvas"></canvas></div>
+    <div class="hx-canvas-hit" aria-hidden="true"></div>
+    <div class="hx-scrim" aria-hidden="true"></div>
+    <div class="th-inner hx-stage-inner">
+      <h1 class="th-display hx-title th-enter th-enter-1" id="hero-title">Seu problema em TI.<br><span class="hx-soft">Um começo simples.</span></h1>
+      <p class="th-lead th-enter th-enter-2">Notebook, programas ou conexão: conte o que aconteceu. O TechHelp ajuda você a organizar o pedido e encontrar atendimento.</p>
+      ${hasDraft ? `<button type="button" class="th-link th-enter th-enter-2" data-act="resume" style="justify-self:start">${icon('bookmarkcheck', 'width="16" height="16"')}Continuar de onde parei</button>` : ''}
+      <div class="hx-command th-enter th-enter-3">
+        <div class="hx-command-label">
+          <b>Descrever meu problema</b>
+          <span>Comece sem criar uma conta.</span>
+        </div>
+        ${areaChips(true)}
+        <p class="hx-command-note">Responda no seu ritmo. A conta entra apenas na publicação. Nesta prévia, nenhum pedido é enviado.</p>
+      </div>
+    </div>
+  </section>`;
+}
+
+function explorer() {
+  const data = catalog();
+  let inner = '';
+
+  if (data.status === 'loading') inner = '<p class="th-body" role="status">Carregando as áreas…</p>';
+  else if (data.status === 'error') {
+    inner = `<div class="hx-state" role="alert">
+      <p><strong>As áreas não carregaram.</strong> Sem resposta do servidor.</p>
+      <button type="button" class="th-button secondary" data-act="retry">Tentar novamente</button>
+    </div>`;
+  } else if (!data.categories.length) {
+    inner = `<div class="hx-state" role="status">
+      <p><strong>Nenhuma área ativa no cadastro.</strong></p>
+      <button type="button" class="th-button secondary" data-act="retry">Atualizar</button>
+    </div>`;
+  } else {
+    const current = data.categories.find(c => c.idCategoria === state.activeArea) || data.categories[0];
+    inner = `<div class="hx-explorer-grid">
+      <div class="hx-list">
+        ${data.categories.map(c => {
+          const ready = Boolean(areaFor(c.nome));
+          const active = current.idCategoria === c.idCategoria;
+          return `<button type="button" class="hx-row${active ? ' is-active' : ''}" data-act="choose" data-id="${c.idCategoria}" data-hover="${c.idCategoria}">
+            ${icon(iconKey(c.nome))}
+            <span class="hx-row-name">${esc(c.nome)}</span>
+            <span class="${ready ? 'th-chip live' : 'th-chip'}">${ready ? 'Perguntas prontas' : 'Em preparação'}</span>
+            <span class="hx-row-desc">${esc(c.descricao || 'Sem descrição cadastrada.')}</span>
+          </button>`;
+        }).join('')}
+      </div>
+      <figure class="hx-figure">
+        ${diagramFor(diagramKeyFor(current.nome))}
+        <figcaption><b>${esc(current.nome)}</b>${esc(current.descricao || 'Sem descrição cadastrada.')}</figcaption>
+      </figure>
+    </div>`;
+  }
+
+  return `<section class="hx-explorer" id="servicos" aria-labelledby="servicos-title"><div class="th-inner">
+    <div class="hx-explorer-head">
+      <h2 class="th-h2" id="servicos-title">Qual parte precisa de ajuda?</h2>
+      <p class="th-body">Passe pelas áreas para conhecer os serviços. Escolha uma para começar pelas perguntas mais simples.</p>
+    </div>
+    ${inner}
+  </div></section>`;
+}
+
+const journeySteps = [
+ ['Escolha o serviço', 'Selecione a área e conte o que precisa resolver.', 'Um notebook que não liga. Um programa com erro. Uma rede que não conecta.', '01'],
+ ['Escolha o profissional', 'Compare as propostas e combine a melhor data para o atendimento.', 'Você escolhe com quem seguir e combina as condições do serviço.', '02'],
+ ['Receba o atendimento', 'O profissional realiza o serviço presencialmente ou a distância, conforme combinado.', 'A forma de atendimento depende do problema e do que vocês acertarem.', '03'],
+ ['Confirme a conclusão', 'Confira o serviço realizado e avalie sua experiência.', 'Um pedido resolvido. Uma experiência que ajuda a próxima pessoa.', '04']
+];
+function narrative() {
+ return `<section class="journey" id="como-funciona" aria-labelledby="journey-title"><div class="journey-pin"><div class="th-inner">
+ <h2 id="journey-title">Como funciona?</h2>
+ <div class="journey-steps"><svg class="journey-scroll-art" aria-hidden="true"><g class="journey-scroll-lines"></g><text class="journey-scroll-star" text-anchor="middle" dominant-baseline="central">✦</text></svg>${journeySteps.map((x,i)=>`<article class="journey-step${i===0?' revealed':''}" data-jstep="${i}" style="--step:${i}">
+
+   <strong aria-hidden="true">${x[3]}</strong><h3>${x[0]}</h3><p>${x[1]}</p>
+ </article>`).join('')}</div>
+ <p class="journey-hint">Role para acompanhar o próximo passo ↓</p>
+
+ <div class="journey-confetti" aria-hidden="true"></div></div></div></section>`;
+}
+let cleanupJourney = () => {};
+function mountJourney() {
+ cleanupJourney();
+ const section=document.querySelector('.journey'); if(!section)return;
+ let previous=-1, celebrated=false, raf=0;
+ const update=()=>{
+ raf=0;
+ const staticMode=reduced(); section.classList.toggle('journey-static',staticMode);
+ const headerHeight=document.querySelector('.th-header').offsetHeight;
+ const distance=Math.max(1,section.offsetHeight-(innerHeight-headerHeight));
+ const progress=Math.max(0,Math.min(1,(headerHeight-section.getBoundingClientRect().top)/distance));
+ const step=progress>=.72?3:progress>=.48?2:progress>=.24?1:0;
+ const track=section.querySelector('.journey-steps');
+ const bounds=track.getBoundingClientRect();
+ const numbers=[...track.querySelectorAll('.journey-step>strong')].map(el=>el.getBoundingClientRect());
+ const vertical=matchMedia('(max-width:700px)').matches;
+ const travel=Math.min(3,progress/.24);
+ const activeSegment=Math.min(2,Math.floor(travel));
+ const segments=numbers.slice(0,3).map((r,i)=>{
+   const next=numbers[i+1];
+   return vertical ? {x1:r.left-bounds.left+r.width/2,y1:r.bottom-bounds.top+8,x2:next.left-bounds.left+next.width/2,y2:next.top-bounds.top-8}
+     : {x1:r.right-bounds.left+18,y1:r.top-bounds.top+r.height/2,x2:next.left-bounds.left-18,y2:next.top-bounds.top+next.height/2};
+ });
+ section.querySelector('.journey-scroll-lines').innerHTML=segments.map((g,i)=>{
+   const t=staticMode?1:Math.max(0,Math.min(1,travel-i));
+   return `<line x1="${g.x1}" y1="${g.y1}" x2="${g.x1+(g.x2-g.x1)*t}" y2="${g.y1+(g.y2-g.y1)*t}" opacity="${t>0?1:0}"/>`;
+ }).join('');
+ const g=segments[activeSegment],t=Math.min(1,travel-activeSegment);
+ const star=section.querySelector('.journey-scroll-star');
+ const x=g.x1+(g.x2-g.x1)*t,y=g.y1+(g.y2-g.y1)*t;
+ star.setAttribute('transform',`translate(${x} ${y}) rotate(${travel*180})`);
+ star.style.opacity=staticMode||travel===0?'0':'1';
+ if(step!==previous){
+ section.querySelectorAll('[data-jstep]').forEach((el,i)=>{el.classList.toggle('revealed',i<=step); if(!staticMode)el.setAttribute('aria-hidden',String(i>step)); else el.removeAttribute('aria-hidden');});
+ section.querySelector('.journey-hint').textContent=step===3?'Etapas completas. Continue para conhecer as ferramentas ↓':'Role para acompanhar o próximo passo ↓';previous=step;
+ }
+ if(step===3&&!celebrated&&!staticMode){celebrated=true;const box=section.querySelector('.journey-confetti');box.innerHTML=Array.from({length:30},(_,i)=>`<i style="--x:${(i*37)%100}%;--delay:${i%6*.05}s;--turn:${i*39}deg"></i>`).join('');}
+ if(progress<.6)celebrated=false;
+ };
+ const onScroll=()=>{if(!raf)raf=requestAnimationFrame(update);};
+ addEventListener('scroll',onScroll,{passive:true}); addEventListener('resize',onScroll);update();
+ cleanupJourney=()=>{removeEventListener('scroll',onScroll);removeEventListener('resize',onScroll);cancelAnimationFrame(raf);};
+}
+
+const RENTAL_PATH = [
+  ['01', 'Consultar', 'Ver o que existe, escolher o item e o período.'],
+  ['02', 'Retirar', 'Combinar a retirada do equipamento para o trabalho.'],
+  ['03', 'Devolver', 'Devolver no fim do período, com a locação registrada.'],
+];
+
+function rental() {
+ return `<section class="rent-v2" id="ferramentas" aria-labelledby="aluguel-title"><div class="th-inner rent-layout">
+ <div><span class="section-label">FERRAMENTAS E KITS</span><h2 id="aluguel-title">Alugue a ferramenta.<br>Faça o trabalho.</h2>
+ <p>Equipamentos para manutenção de computadores e instalação de redes, pelo período que você precisar.</p>
+ <p class="rent-explanation">Escolha a ferramenta ou kit, combine o período e a retirada. Ao terminar, devolva o equipamento.</p>
+ <button class="th-button secondary" type="button" data-act="rental-info"><span>Conhecer o aluguel</span> ${icon('arrowright', 'width="20" height="20"')}</button>
+ <small>Catálogo e reservas em preparação.</small></div>
+ <figure class="rent-art"><svg viewBox="0 0 500 300" role="img" aria-label="Ilustração de um testador de cabos de rede e kit de chaves de precisão para manutenção de computadores">
+ <ellipse cx="250" cy="268" rx="210" ry="12" fill="#000" opacity=".2"/>
+ <path d="M98 77V43c0-31 117-31 117 0v35" fill="none" stroke="#ff8b4d" stroke-width="7"/>
+ <rect x="47" y="74" width="109" height="164" rx="17" fill="#363c43" stroke="#656b72" stroke-width="2"/>
+ <rect x="65" y="94" width="73" height="43" rx="7" fill="#14171b"/><text x="102" y="121" fill="#ffb488" text-anchor="middle" font-size="14" font-family="Arial">LAN TEST</text>
+ ${Array.from({length:8},(_,i)=>`<circle cx="81" cy="${151+i*9}" r="2.4" fill="${i<4?'#ff8b4d':'#81878d'}"/><path d="M95 ${151+i*9}h25" stroke="#777d84" stroke-width="2"/>`).join('')}
+ <rect x="185" y="77" width="62" height="159" rx="13" fill="#2c3138" stroke="#5e656d" stroke-width="2"/>
+ <rect x="198" y="93" width="36" height="27" rx="4" fill="#17191d"/><path d="M199 145h34m-34 14h34m-34 14h34m-34 14h34" stroke="#858b93" stroke-width="3"/>
+ <g transform="rotate(8 365 160)"><rect x="284" y="61" width="167" height="187" rx="19" fill="#252a30" stroke="#616870" stroke-width="2"/>
+ <rect x="298" y="77" width="139" height="152" rx="11" fill="#15181c"/>
+ ${Array.from({length:5},(_,i)=>`<rect x="${310+i*24}" y="98" width="8" height="91" rx="4" fill="#9da3aa"/><rect x="${307+i*24}" y="173" width="14" height="39" rx="6" fill="${i===2?'#ff8b4d':'#bf714c'}"/>`).join('')}
+ </g></svg><figcaption><span>Testador de cabos de rede</span><span>Kit de chaves de precisão</span></figcaption><small>Ilustrações dos tipos de equipamento previstos.</small></figure>
+ </div></section>`;
+}
+function professionals() {
+ return `<section class="pro-v2" id="profissionais" aria-labelledby="pro-title"><div class="th-inner pro-layout">
+ <div class="pro-invite"><span class="section-label">PARA PROFISSIONAIS DE TI</span><h2 id="pro-title">Você sabe resolver.<br>Mostre seu trabalho.</h2>
+ <p>Faça parte do TechHelp para apresentar suas especialidades e encontrar clientes que precisam do que você faz.</p>
+ <button type="button" class="th-button" data-act="join-professional"><span>Quero ser profissional</span> ${icon('arrowright', 'width="20" height="20"')}</button>
+ <small>Veja como será a entrada na plataforma.</small></div>
+ <div class="pro-benefits"><div><span>01</span><h3>Apresente seu perfil</h3><p>Suas especialidades, experiências e portfólio em um só lugar.</p></div><div><span>02</span><h3>Encontre solicitações</h3><p>Conheça o problema do cliente antes de enviar sua proposta.</p></div><div><span>03</span><h3>Combine o atendimento</h3><p>Acerte as condições com o cliente e acompanhe o serviço.</p></div></div>
+ </div></section>`;
+}
+
+function closing() {
+  const hasDraft = Boolean(state.draft.area) || Boolean(state.draft.details.trim());
+  return `<section class="hx-end" aria-labelledby="fechar-title"><div class="th-inner hx-end-inner">
+    <div class="hx-end-strip" aria-hidden="true">${'<i></i>'.repeat(11)}</div>
+    <h2 class="th-h2" id="fechar-title">${hasDraft ? 'Seu pedido está esperando você' : 'Comece pelo que você já sabe'}</h2>
+    <p>${hasDraft ? 'As respostas continuam guardadas nesta aba. Dá para revisar e mudar tudo antes de publicar.' : 'Uma frase comum basta. O resto das perguntas é com a gente.'}</p>
+    <button type="button" class="th-button" data-act="${hasDraft ? 'resume' : 'categories'}">${hasDraft ? 'Retomar meu pedido' : 'Descrever meu problema'}</button>
+  </div></section>`;
+}
+
+function footer() {
+  return `<footer class="th-footer"><div class="th-inner th-footer-inner">
+    <div class="th-footer-brand">
+      <strong>TechHelp</strong>
+      <span>Serviços de TI e aluguel de ferramentas técnicas.</span>
+      <span>Projeto Integrador de Software, SENAC Taboão da Serra.</span>
+    </div>
+    <div class="th-footer-links">
+      <button type="button" data-act="section" data-id="como-funciona">Como funciona</button>
+      <button type="button" data-act="section" data-id="ferramentas">Aluguel de ferramentas</button>
+      <button type="button" data-act="section" data-id="profissionais">Sou profissional</button>
+      <button type="button" aria-pressed="${state.paused}" data-act="motion">${icon(state.paused ? 'play' : 'pause')}${state.paused ? 'Retomar movimento' : 'Pausar movimento'}</button>
+    </div>
+  </div></footer>`;
+}
+
+function optionsGroup(name, title, options, value) {
+  return `<fieldset class="th-question"><legend>${esc(title)}</legend>
+    <div class="th-options${options.length === 1 ? ' th-options-1' : ''}">
+      ${options.map(option => `<label class="th-option">
+        <input type="radio" name="${name}" value="${esc(option)}" data-radio="${name}"${value === option ? ' checked' : ''}>
+        <span>${esc(option)}</span>
+      </label>`).join('')}
+    </div>
+  </fieldset>`;
+}
+
+function wizard() {
+  const draft = state.draft;
+  const step = state.stage;
+  const answers = answersFor(draft);
+  const questions = questionsFor(draft);
+  const remote = remoteAllowed(draft);
+  let body = '';
+
+  if (step === 0) {
+    body = `<div class="th-flow-head">
+        <span class="th-flow-area">${esc(draft.area)}</span>
+        <h1 class="th-flow-title" id="etapa-titulo" tabindex="-1">Vamos entender seu problema</h1>
+        <p>Responda o que souber. “Não sei” também serve: você não precisa fazer um diagnóstico.</p>
+      </div>
+      ${questions.map(q => `<div class="th-question-enter">
+        ${optionsGroup(q.key, q.title, q.options, answers[q.key] || '')}
+        ${['Outro', 'Outra'].includes(answers[q.key]) ? `<label class="th-label">Qual? <span>(opcional)</span><input class="th-field" maxlength="160" data-extra="${q.key}" value="${esc(answers[q.key + 'Text'] || '')}"></label>` : ''}
+      </div>`).join('')}
+      ${draft.area === 'Software' && answers.system && (answers.problem || '').includes('programa')
+        ? `<label class="th-label">Nome do programa <span>(se souber)</span><input class="th-field" maxlength="160" data-extra="program" value="${esc(answers.programText || '')}"></label>` : ''}
+      ${draft.area === 'Software' && answers.problem === 'Recuperar arquivos'
+        ? `<p class="th-note">${icon('circlehelp')}Conte apenas o que aconteceu. Não vamos pedir que você formate o disco nem faça testes que possam alterar seus arquivos.</p>` : ''}`;
+  }
+
+  if (step === 1) {
+    body = `<div class="th-flow-head">
+        <h1 class="th-flow-title" id="etapa-titulo" tabindex="-1">Como você prefere receber ajuda?</h1>
+        <p>${remote
+          ? 'Pelo que você respondeu, uma primeira orientação remota pode ser considerada. O profissional confirma se é adequada.'
+          : 'Pelo que você respondeu, o caminho mais seguro é uma avaliação presencial. Você não precisa testar nem abrir o equipamento.'}</p>
+      </div>
+      ${optionsGroup('mode', 'Tipo de atendimento', remote ? ['Presencial', 'Remoto'] : ['Presencial'], draft.mode)}
+      ${optionsGroup('urgency', 'Quando você precisa?', urgencies, draft.urgency)}
+      <p class="th-note">${icon('circlehelp')}Isso registra sua preferência. Atendimento no mesmo dia depende da disponibilidade do profissional e do acordo entre vocês.</p>
+      ${draft.mode === 'Presencial' ? `<div class="th-subgroup th-question-enter">
+        <h2>Em qual região seria o atendimento?</h2>
+        <p>Cidade, estado e bairro bastam agora. O endereço completo vocês combinam depois.</p>
+        <label class="th-label">Cidade e estado<input class="th-field" maxlength="120" autocomplete="address-level2" placeholder="Ex.: Taboão da Serra, SP" data-text="city" value="${esc(draft.city)}"></label>
+        <label class="th-label">Bairro<input class="th-field" maxlength="120" placeholder="Ex.: Jardim Record" data-text="district" value="${esc(draft.district)}"></label>
+      </div>` : ''}`;
+  }
+
+  if (step === 2) {
+    body = `<div class="th-flow-head">
+        <h1 class="th-flow-title" id="etapa-titulo" tabindex="-1">Quer acrescentar algum detalhe?</h1>
+        <p>Quando começou? Aconteceu algo antes? Escreva só o que souber. Esta etapa é opcional.</p>
+      </div>
+      <label class="th-label">Detalhes<textarea class="th-field" maxlength="3000" data-text="details" placeholder="Ex.: começou ontem. A luz do teclado acende, mas a tela fica preta.">${esc(draft.details)}</textarea></label>
+      <p class="th-field-meta"><span>Não inclua senhas nem dados de acesso.</span><span data-counter>${draft.details.length} de 3000</span></p>`;
+  }
+
+  if (step === 3) {
+    const rows = summarizeDraft(draft);
+    const serviceLabels = new Set(['Atendimento', 'Urgência informada', 'Região informada']);
+    const problem = rows.filter(r => !serviceLabels.has(r.label) && r.label !== 'Detalhes');
+    const service = rows.filter(r => serviceLabels.has(r.label));
+    const row = (label, value) => `<div class="th-review-row"><dt>${esc(label)}</dt><dd>${value}</dd></div>`;
+    body = `<div class="th-flow-head">
+        <h1 class="th-flow-title" id="etapa-titulo" tabindex="-1">Está tudo certo com seu pedido?</h1>
+        <p>Este é o pedido como ele seria publicado. Nada foi enviado ainda.</p>
+      </div>
+      <div class="th-review">
+        <div class="th-review-group">
+          <div class="th-review-head"><h2>Seu problema</h2><button type="button" class="th-link" data-act="stage" data-id="0">Editar problema</button></div>
+          <dl class="th-review-rows">${row('Título do pedido', esc(buildTitle(draft)))}${row('Área', esc(draft.area))}${problem.map(r => row(r.label, esc(r.value))).join('')}</dl>
+        </div>
+        <div class="th-review-group">
+          <div class="th-review-head"><h2>Atendimento</h2><button type="button" class="th-link" data-act="stage" data-id="1">Editar atendimento</button></div>
+          <dl class="th-review-rows">${service.map(r => row(r.label, esc(r.value))).join('')}${draft.mode === 'Remoto' ? row('Região', '<em>Não é necessária para atendimento remoto.</em>') : ''}</dl>
+        </div>
+        <div class="th-review-group">
+          <div class="th-review-head"><h2>Detalhes</h2><button type="button" class="th-link" data-act="stage" data-id="2">Editar detalhes</button></div>
+          <dl class="th-review-rows">${row('Texto livre', draft.details.trim() ? esc(draft.details) : '<em>Nenhum detalhe adicional.</em>')}</dl>
+        </div>
+      </div>
+      <p class="th-note">${icon('circlehelp')}A publicação ainda não está disponível: ela depende da conta de cliente, que está em desenvolvimento. Você já pode preparar e revisar o pedido; nenhum dado sai do seu navegador.</p>`;
+  }
+
+  return `<section class="th-wizard" id="solicitacao" aria-labelledby="etapa-titulo"><div class="th-wizard-inner">
+    <div class="th-wizard-top">
+      <button type="button" class="th-link quiet" data-act="home">${icon('arrowleft', 'width="15" height="15"')}Voltar ao início</button>
+      <button type="button" class="th-link quiet" data-act="categories">Trocar de área</button>
+    </div>
+    <div class="th-rail">
+      <ol class="th-rail-steps">
+        ${stages.map((label, index) => `<li class="${index < step ? 'is-done' : index === step ? 'is-now' : ''}"${index === step ? ' aria-current="step"' : ''}>
+          <span class="th-dot">${index < step ? icon('check', 'width="13" height="13"') : index + 1}</span><span>${label}</span>
+        </li>`).join('')}
+      </ol>
+      <div class="th-rail-track" aria-hidden="true"><div style="width:${(step + 1) * 25}%"></div></div>
+      <p class="th-sr-only" role="status">Etapa ${step + 1} de ${stages.length}: ${stages[step]}</p>
+    </div>
+    <form class="th-panel th-flow" data-form>
+      <div class="th-flow-body">${body}</div>
+      ${state.error ? `<p class="th-note th-error" role="alert">${icon('circlehelp')}${esc(state.error)}</p>` : ''}
+      <div class="th-actions">
+        <button type="button" class="th-button secondary" data-act="back">${icon('arrowleft', 'width="16" height="16"')}Voltar</button>
+        <button class="th-button" type="submit">${step === 3 ? 'Publicar solicitação' : step === 2 ? 'Revisar solicitação' : 'Continuar'}${icon(step === 3 ? 'send' : 'arrowright', 'width="16" height="16"')}</button>
+      </div>
+    </form>
+    <p class="th-draft-note">${icon('bookmarkcheck')}${state.saved
+      ? 'Rascunho guardado nesta aba. Recarregar mantém suas respostas; fechar a aba encerra esse armazenamento.'
+      : 'O navegador não permitiu guardar o rascunho. Suas respostas duram enquanto esta página estiver aberta.'}</p>
+  </div></section>`;
+}
+
+function chooseScreen() {
+  const unsure = state.screen === 'unsure';
+  return `<section class="th-wizard" aria-labelledby="escolha-titulo"><div class="th-wizard-inner">
+    <div class="th-wizard-top"><button type="button" class="th-link quiet" data-act="home">${icon('arrowleft', 'width="15" height="15"')}Voltar ao início</button></div>
+    <div class="th-panel th-flow">
+      <div class="th-flow-head">
+        <h1 class="th-flow-title" id="escolha-titulo">${unsure ? 'Conte o que está acontecendo' : 'Qual área chega mais perto?'}</h1>
+        <p>${unsure
+          ? 'Escreva com suas palavras. Depois escolha a área mais próxima e o assistente ajusta as perguntas.'
+          : 'Não precisa acertar a causa. O assistente já atende Hardware, Redes e Software.'}</p>
+      </div>
+      ${unsure ? `<label class="th-label">Sua descrição<textarea class="th-field" maxlength="3000" data-text="details" placeholder="Ex.: meu notebook liga, mas a tela fica preta">${esc(state.draft.details)}</textarea></label>
+        <p class="th-field-meta"><span>Este texto vai para a etapa de detalhes do pedido.</span><span data-counter>${state.draft.details.length} de 3000</span></p>` : ''}
+      <div class="th-subgroup">
+        <h2>Áreas com perguntas prontas</h2>
+        ${areaChips(!unsure)}
+      </div>
+    </div>
+  </div></section>`;
+}
+
+function previewBar() {
+  const modes = [['ready', 'Categorias'], ['loading', 'Carregando'], ['error', 'API fora do ar'], ['empty', 'Nenhuma área ativa']];
+  return `<div class="pv-bar"><div class="pv-bar-inner">
+    <p><b>Prévia integrada · para revisão.</b> Nenhuma alteração no site oficial. Catálogo demonstrativo; sem conexão com o servidor.</p>
+    <div class="pv-modes" role="group" aria-label="Simular estado do catálogo">
+      ${modes.map(([id, label]) => `<button type="button" data-act="catalog" data-id="${id}" aria-pressed="${state.catalogMode === id}">${label}</button>`).join('')}
+    </div>
+  </div></div>`;
+}
+
+const root = document.getElementById('app');
+let field = null;
+
+function mountCanvas() {
+  if (field) { field.destroy(); field = null; }
+  const canvas = root.querySelector('#hx-canvas');
+  if (!canvas) return;
+  const still = state.paused
+    || window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    || window.matchMedia('(pointer: coarse)').matches;
+  try { field = createModuleField(canvas, { still }); }
+  catch { field = null; }
+}
+
+function render(focusTitle) {
+  const active = document.activeElement;
+  const keep = active && (active.dataset.text || active.dataset.extra);
+  const caret = keep && typeof active.selectionStart === 'number' ? active.selectionStart : null;
+
+  root.className = state.paused ? 'techhelp-site th-paused' : 'techhelp-site';
+  root.innerHTML = `
+    <a class="th-skip" href="#conteudo">Ir para o conteúdo</a>
+    ${previewBar()}
+    ${header()}
+    <main id="conteudo" tabindex="-1">
+      ${state.screen === 'request' ? wizard() : ''}
+      ${state.screen === 'categories' || state.screen === 'unsure' ? chooseScreen() : ''}
+      ${state.screen === 'home' ? stageSection() + explorer() + narrative() + rental() + professionals() + closing() : ''}
+    </main>
+    ${footer()}
+    <dialog class="th-dialog" aria-labelledby="th-dialog-title">
+      <h2 id="th-dialog-title">${esc(state.notice ? state.notice.title : '')}</h2>
+      <p>${esc(state.notice ? state.notice.body : '')}</p>
+      <button type="button" class="th-button" data-act="close">Entendi</button>
+    </dialog>`;
+
+  cleanupJourney();
+  if (state.screen === 'home') { mountCanvas(); mountJourney(); }
+  else if (field) { field.destroy(); field = null; }
+
+  if (state.notice) root.querySelector('.th-dialog').showModal();
+
+  if (keep) {
+    const again = root.querySelector(`[data-text="${keep}"], [data-extra="${keep}"]`);
+    if (again) {
+      again.focus();
+      if (caret !== null) { try { again.setSelectionRange(caret, caret); } catch { /* ignore */ } }
+    }
+  } else if (focusTitle) {
+    const title = root.querySelector('.th-flow-title');
+    if (title) title.focus({ preventScroll: true });
+  }
+}
+
+function notify(title, body) { state.notice = { title, body }; render(); }
+
+function goStage(next) {
+  state.error = '';
+  state.stage = next;
+  render(true);
+  const anchor = document.getElementById('solicitacao');
+  if (anchor) anchor.scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
+}
+
+function navigate(screen) {
+  state.menu = false;
+  state.screen = screen;
+  if (screen === 'request') state.stage = 0;
+  state.error = '';
+  render();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function resume() {
+  const category = catalog().categories.find(c => c.idCategoria === state.draft.categoryId && areaFor(c.nome) === state.draft.area);
+  if (catalog().status !== 'ready' || !category) {
+    navigate('categories');
+    notify('Confirme a área do seu pedido', 'Precisamos de uma área disponível no servidor para continuar. Suas respostas anteriores continuam guardadas.');
+    return;
+  }
+  navigate('request');
+}
+
+root.addEventListener('click', event => {
+  const target = event.target.closest('[data-act]');
+  if (!target) return;
+  const act = target.dataset.act;
+  const id = target.dataset.id;
+
+  if (act === 'rental-info') notify('Aluguel de ferramentas e kits', 'A proposta é consultar equipamentos, escolher um período e combinar retirada e devolução. O catálogo ainda será integrado. Esta prévia não faz reservas nem apresenta disponibilidade.');
+  if (act === 'join-professional') notify('Seu próximo passo como profissional', 'Na versão integrada, você criará sua conta e completará o perfil com especialidades e portfólio. Depois poderá consultar solicitações e enviar propostas. O cadastro ainda não está disponível nesta prévia; nenhum dado foi enviado.');
+  if (act === 'home') navigate('home');
+  if (act === 'categories') navigate('categories');
+  if (act === 'unsure') navigate('unsure');
+  if (act === 'menu') {
+    state.menu = !state.menu;
+    render();
+    const first = root.querySelector('.th-mobile-nav button');
+    if (first) first.focus();
+  }
+  if (act === 'signin') notify('Entrar ainda não está disponível', 'O login e o cadastro fazem parte da próxima etapa do projeto. Você pode montar o pedido agora: as respostas ficam guardadas nesta aba do navegador.');
+  if (act === 'close') { state.notice = null; root.querySelector('.th-dialog').close(); render(); }
+  if (act === 'retry') { state.catalogMode = 'ready'; render(); }
+  if (act === 'motion') { state.paused = !state.paused; render(); }
+  if (act === 'catalog') { state.catalogMode = id; render(); }
+  if (act === 'resume') resume();
+  if (act === 'stage') goStage(Number(id));
+  if (act === 'back') { if (state.stage === 0) navigate('categories'); else goStage(state.stage - 1); }
+
+  if (act === 'section') {
+    state.menu = false;
+    const wasHome = state.screen === 'home';
+    state.screen = 'home';
+    render();
+    requestAnimationFrame(() => {
+      const anchor = document.getElementById(id);
+      if (anchor) anchor.scrollIntoView({ behavior: reduced() || !wasHome ? 'auto' : 'smooth' });
+    });
+  }
+
+  if (act === 'choose') {
+    const category = catalog().categories.find(c => c.idCategoria === Number(id));
+    if (!category) return;
+    const area = areaFor(category.nome);
+    if (!area) {
+      notify(`${category.nome} ainda não tem o assistente`, 'As perguntas dessa área estão em preparação. Por enquanto o assistente atende Hardware, Redes e Software. Se o seu caso encostar em uma dessas, dá para montar o pedido agora.');
+      return;
+    }
+    saveDraft({ ...state.draft, categoryId: category.idCategoria, area, mode: state.draft.area === area ? state.draft.mode : '' });
+    navigate('request');
+  }
+});
+
+// Percorrer a lista troca o objeto desenhado, sem refazer a página inteira.
+function highlight(id) {
+  if (!id || state.activeArea === Number(id)) return;
+  state.activeArea = Number(id);
+  const current = catalog().categories.find(c => c.idCategoria === state.activeArea);
+  const figure = root.querySelector('.hx-figure');
+  if (!current || !figure) return;
+  figure.innerHTML = `${diagramFor(diagramKeyFor(current.nome))}<figcaption><b>${esc(current.nome)}</b>${esc(current.descricao || '')}</figcaption>`;
+  root.querySelectorAll('[data-hover]').forEach(row => {
+    row.classList.toggle('is-active', row.dataset.hover === String(state.activeArea));
+  });
+}
+
+root.addEventListener('mouseover', event => {
+  const row = event.target.closest('[data-hover]');
+  if (row) highlight(row.dataset.hover);
+});
+root.addEventListener('focusin', event => {
+  const row = event.target.closest('[data-hover]');
+  if (row) highlight(row.dataset.hover);
+});
+
+root.addEventListener('change', event => {
+  const input = event.target;
+  const group = input.dataset.radio;
+  if (!group) return;
+  state.error = '';
+  if (group === 'mode') saveDraft({ ...state.draft, mode: input.value });
+  else if (group === 'urgency') saveDraft({ ...state.draft, urgency: input.value });
+  else saveDraft(selectAnswer(state.draft, group, input.value));
+  render();
+});
+
+root.addEventListener('input', event => {
+  const input = event.target;
+  if (input.dataset.text) {
+    saveDraft({ ...state.draft, [input.dataset.text]: input.value });
+    const counter = root.querySelector('[data-counter]');
+    if (counter && input.dataset.text === 'details') counter.textContent = `${input.value.length} de 3000`;
+    return;
+  }
+  if (input.dataset.extra) {
+    const area = state.draft.area;
+    if (!area) return;
+    const answers = { ...answersFor(state.draft), [input.dataset.extra + 'Text']: input.value };
+    saveDraft({ ...state.draft, branches: { ...state.draft.branches, [area]: answers } });
+  }
+});
+
+root.addEventListener('submit', event => {
+  event.preventDefault();
+  if (state.stage < 3) {
+    const invalid = validateStage(state.draft, state.stage);
+    if (invalid) { state.error = invalid; render(); return; }
+    goStage(state.stage + 1);
+    return;
+  }
+  for (const item of [0, 1]) {
+    const invalid = validateStage(state.draft, item);
+    if (invalid) { state.stage = item; state.error = invalid; render(true); return; }
+  }
+  notify('Seu pedido ainda não foi publicado', 'A publicação depende da conta de cliente: o servidor precisa saber de quem é o pedido. Nada foi enviado, e o rascunho continua guardado. Você pode voltar e revisar tudo.');
+});
+
+document.addEventListener('keydown', event => {
+  if (event.key !== 'Escape' || !state.menu) return;
+  state.menu = false;
+  render();
+  const toggle = root.querySelector('.th-menu-toggle');
+  if (toggle) toggle.focus();
+});
+
+render();
+
+</script>
+</body>
+</html>

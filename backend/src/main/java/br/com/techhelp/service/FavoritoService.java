@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarFavoritoRequest;
 import br.com.techhelp.model.Favorito;
 import br.com.techhelp.model.FavoritoId;
@@ -12,6 +14,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class FavoritoService {
 
     private final FavoritoRepository favoritoRepository;
@@ -28,6 +31,7 @@ public class FavoritoService {
         this.tecnicoRepository = tecnicoRepository;
     }
 
+    @PreAuthorize("@acesso.cliente(#request.idCliente())")
     public Favorito adicionar(
             CriarFavoritoRequest request
     ) {
@@ -63,6 +67,7 @@ public class FavoritoService {
         return favoritoRepository.save(favorito);
     }
 
+    @PreAuthorize("@acesso.cliente(#idCliente)")
     public List<Favorito> listarPorCliente(
             Long idCliente
     ) {
@@ -79,6 +84,7 @@ public class FavoritoService {
                 );
     }
 
+    @PreAuthorize("@acesso.cliente(#idCliente)")
     public void remover(
             Long idCliente,
             Long idTecnico

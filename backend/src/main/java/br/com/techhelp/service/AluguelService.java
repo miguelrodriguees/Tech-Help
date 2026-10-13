@@ -1,6 +1,11 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarAluguelRequest;
+import br.com.techhelp.dto.AlugueisAdminResponse;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import br.com.techhelp.model.Aluguel;
 import br.com.techhelp.model.AluguelItem;
 import br.com.techhelp.model.Kit;
@@ -10,33 +15,43 @@ import br.com.techhelp.repository.AluguelRepository;
 import br.com.techhelp.repository.KitRepository;
 import br.com.techhelp.repository.UsuarioRepository;
 
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Comparator;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class AluguelService {
 
     private final AluguelRepository aluguelRepository;
     private final AluguelItemRepository aluguelItemRepository;
     private final UsuarioRepository usuarioRepository;
     private final KitRepository kitRepository;
+    private final EntityManager entityManager;
 
     public AluguelService(
             AluguelRepository aluguelRepository,
             AluguelItemRepository aluguelItemRepository,
             UsuarioRepository usuarioRepository,
-            KitRepository kitRepository
+            KitRepository kitRepository,
+            EntityManager entityManager
     ) {
         this.aluguelRepository = aluguelRepository;
         this.aluguelItemRepository = aluguelItemRepository;
         this.usuarioRepository = usuarioRepository;
         this.kitRepository = kitRepository;
+        this.entityManager = entityManager;
     }
 
+    @PreAuthorize("@acesso.mesmoUsuario(#request.idUsuario())")
     public Aluguel criar(CriarAluguelRequest request) {
 
         if (!usuarioRepository.existsById(request.idUsuario())) {
@@ -73,6 +88,7 @@ public class AluguelService {
         return aluguelRepository.save(aluguel);
     }
 
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public Aluguel buscarPorId(Long idAluguel) {
 
         return aluguelRepository
@@ -83,6 +99,7 @@ public class AluguelService {
                         ));
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<Aluguel> listarPorUsuario(
             Long idUsuario
     ) {
@@ -100,11 +117,27 @@ public class AluguelService {
                 );
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
+    public AlugueisAdminResponse listarParaAdministracao(int pagina) {
+        if (pagina < 0 || pagina > 100000) {
+            throw new IllegalArgumentException("Página inválida");
+        }
+        var resultado = aluguelRepository.findAll(PageRequest.of(pagina, 20,
+                Sort.by(Sort.Direction.DESC, "idAluguel")));
+        var ids = resultado.getContent().stream().map(Aluguel::getIdUsuario).distinct().toList();
+        var nomes = usuarioRepository.findAllById(ids).stream()
+                .collect(Collectors.toMap(u -> u.getIdUsuario(), u -> u.getNome()));
+        var itens = resultado.getContent().stream().map(a ->
+                new AlugueisAdminResponse.Item(a, nomes.getOrDefault(a.getIdUsuario(), "Usuário #" + a.getIdUsuario()))).toList();
+        return new AlugueisAdminResponse(itens, resultado.getNumber(), resultado.getTotalPages());
+    }
+
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Aluguel retirar(Long idAluguel) {
 
         Aluguel aluguel =
                 buscarPorId(idAluguel);
+        entityManager.refresh(aluguel, LockModeType.PESSIMISTIC_WRITE);
 
         if (!"RESERVADO".equals(
                 aluguel.getStatus()
@@ -132,11 +165,12 @@ public class AluguelService {
         return aluguelRepository.save(aluguel);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Aluguel devolver(Long idAluguel) {
 
         Aluguel aluguel =
                 buscarPorId(idAluguel);
+        entityManager.refresh(aluguel, LockModeType.PESSIMISTIC_WRITE);
 
         if (!"RETIRADO".equals(aluguel.getStatus())
                 && !"ATRASADO".equals(aluguel.getStatus())) {
@@ -157,11 +191,13 @@ public class AluguelService {
         return aluguelRepository.save(aluguel);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED)
+    @PreAuthorize("@acesso.aluguel(#idAluguel)")
     public Aluguel cancelar(Long idAluguel) {
 
         Aluguel aluguel =
                 buscarPorId(idAluguel);
+        entityManager.refresh(aluguel, LockModeType.PESSIMISTIC_WRITE);
 
         if (!"RESERVADO".equals(
                 aluguel.getStatus()
@@ -187,6 +223,7 @@ public class AluguelService {
                                 idAluguel
                         );
 
+        itens = itens.stream().sorted(Comparator.comparing(AluguelItem::getIdKit)).toList();
         for (AluguelItem item : itens) {
 
             Kit kit =
@@ -197,7 +234,11 @@ public class AluguelService {
                                             "Kit não encontrado"
                                     ));
 
-            kit.setStatus("DISPONIVEL");
+            entityManager.refresh(kit, LockModeType.PESSIMISTIC_WRITE);
+            if ("INDISPONIVEL".equals(kit.getStatus())
+                    && aluguelItemRepository.contarReservasAtivasDoKit(kit.getIdKit()) == 0) {
+                kit.setStatus("DISPONIVEL");
+            }
 
             kitRepository.save(kit);
         }

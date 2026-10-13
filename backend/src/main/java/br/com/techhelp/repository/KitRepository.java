@@ -9,6 +9,7 @@ public interface KitRepository
         extends JpaRepository<Kit, Long> {
 
     boolean existsByNomeIgnoreCase(String nome);
+    boolean existsByNomeIgnoreCaseAndIdKitNot(String nome, Long idKit);
 
     List<Kit> findByStatusOrderByNomeAsc(
             String status

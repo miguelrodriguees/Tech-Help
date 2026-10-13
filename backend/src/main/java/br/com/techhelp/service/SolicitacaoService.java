@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarSolicitacaoRequest;
 import br.com.techhelp.model.Categoria;
 import br.com.techhelp.model.Solicitacao;
@@ -12,27 +14,35 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class SolicitacaoService {
 
     private final SolicitacaoRepository solicitacaoRepository;
     private final CategoriaRepository categoriaRepository;
     private final ClienteRepository clienteRepository;
     private final EnderecoRepository enderecoRepository;
+    private final EntityManager entityManager;
 
     public SolicitacaoService(
             SolicitacaoRepository solicitacaoRepository,
             CategoriaRepository categoriaRepository,
             ClienteRepository clienteRepository,
-            EnderecoRepository enderecoRepository
+            EnderecoRepository enderecoRepository,
+            EntityManager entityManager
     ) {
         this.solicitacaoRepository = solicitacaoRepository;
         this.categoriaRepository = categoriaRepository;
         this.clienteRepository = clienteRepository;
         this.enderecoRepository = enderecoRepository;
+        this.entityManager = entityManager;
     }
 
+    @PreAuthorize("@acesso.cliente(#dados.idCliente())")
+    @Transactional
     public Solicitacao criar(CriarSolicitacaoRequest dados) {
 
         if (!clienteRepository.existsById(dados.idCliente())) {
@@ -167,18 +177,22 @@ public class SolicitacaoService {
                 "ABERTA"
         );
 
-        return solicitacaoRepository
-                .save(solicitacao);
+        Solicitacao salva = solicitacaoRepository.save(solicitacao);
+        entityManager.flush();
+        entityManager.refresh(salva);
+        return salva;
     }
 
+    @PreAuthorize("@acesso.profissional()")
     public List<Solicitacao> listarAbertas() {
 
         return solicitacaoRepository
-                .findByStatusOrderByDataCadastroDesc(
-                        "ABERTA"
+                .findByStatusInOrderByDataCadastroDesc(
+                        List.of("ABERTA", "EM_NEGOCIACAO")
                 );
     }
 
+    @PreAuthorize("@acesso.cliente(#idCliente)")
     public List<Solicitacao> listarPorCliente(
             Long idCliente
     ) {
@@ -195,6 +209,7 @@ public class SolicitacaoService {
                 );
     }
 
+    @PreAuthorize("@acesso.lerSolicitacao(#id)")
     public Solicitacao buscarPorId(Long id) {
 
         return solicitacaoRepository

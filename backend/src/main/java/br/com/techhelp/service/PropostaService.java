@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarPropostaRequest;
 import br.com.techhelp.model.Proposta;
 import br.com.techhelp.model.Solicitacao;
@@ -11,24 +13,34 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class PropostaService {
 
     private final PropostaRepository propostaRepository;
     private final SolicitacaoRepository solicitacaoRepository;
     private final TecnicoRepository tecnicoRepository;
+    private final EntityManager entityManager;
 
     public PropostaService(
             PropostaRepository propostaRepository,
             SolicitacaoRepository solicitacaoRepository,
-            TecnicoRepository tecnicoRepository
+            TecnicoRepository tecnicoRepository,
+            EntityManager entityManager
     ) {
         this.propostaRepository = propostaRepository;
         this.solicitacaoRepository = solicitacaoRepository;
         this.tecnicoRepository = tecnicoRepository;
+        this.entityManager = entityManager;
     }
 
+    @PreAuthorize("@acesso.tecnico(#dados.idTecnico())")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Proposta criar(CriarPropostaRequest dados) {
 
         Solicitacao solicitacao = solicitacaoRepository
@@ -38,6 +50,9 @@ public class PropostaService {
                                 "Solicitação não encontrada"
                         )
                 );
+
+        // Mesma ordem do aceite: bloquear e reler o pedido antes de alterar propostas.
+        entityManager.refresh(solicitacao, LockModeType.PESSIMISTIC_WRITE);
 
         if (!tecnicoRepository.existsById(
                 dados.idTecnico()
@@ -116,9 +131,12 @@ public class PropostaService {
             );
         }
 
+        entityManager.flush();
+        entityManager.refresh(salva);
         return salva;
     }
 
+    @PreAuthorize("@acesso.donoSolicitacao(#idSolicitacao)")
     public List<Proposta> listarPorSolicitacao(
             Long idSolicitacao
     ) {
@@ -137,6 +155,7 @@ public class PropostaService {
                 );
     }
 
+    @PreAuthorize("@acesso.tecnico(#idTecnico)")
     public List<Proposta> listarPorTecnico(
             Long idTecnico
     ) {

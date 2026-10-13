@@ -1,5 +1,7 @@
 package br.com.techhelp.service;
 
+import org.springframework.security.access.prepost.PreAuthorize;
+
 import br.com.techhelp.dto.CriarDenunciaRequest;
 import br.com.techhelp.model.Denuncia;
 import br.com.techhelp.repository.DenunciaRepository;
@@ -14,6 +16,7 @@ import java.util.NoSuchElementException;
 import java.time.LocalDateTime;
 
 @Service
+@PreAuthorize("@acesso.admin()")
 public class DenunciaService {
 
     private final DenunciaRepository denunciaRepository;
@@ -30,6 +33,7 @@ public class DenunciaService {
         this.servicoRepository = servicoRepository;
     }
 
+    @PreAuthorize("@acesso.mesmoUsuario(#request.idDenunciante())")
     public Denuncia criar(
             CriarDenunciaRequest request
     ) {
@@ -96,6 +100,7 @@ public class DenunciaService {
         );
     }
 
+    @PreAuthorize("@acesso.denuncia(#idDenuncia)")
     public Denuncia buscarPorId(
             Long idDenuncia
     ) {
@@ -118,6 +123,7 @@ public class DenunciaService {
                 );
     }
 
+    @PreAuthorize("@acesso.usuario(#idUsuario)")
     public List<Denuncia> listarPorDenunciante(
             Long idUsuario
     ) {

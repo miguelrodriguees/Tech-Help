@@ -1,6 +1,7 @@
 package br.com.techhelp.controller;
 
 import br.com.techhelp.dto.CriarFerramentaRequest;
+import br.com.techhelp.dto.AtualizarFerramentaRequest;
 import br.com.techhelp.model.Ferramenta;
 import br.com.techhelp.service.FerramentaService;
 import jakarta.validation.Valid;
@@ -32,6 +33,11 @@ public class FerramentaController {
         return ResponseEntity
                 .status(HttpStatus.CREATED)
                 .body(ferramentaService.criar(request));
+    }
+
+    @PutMapping("/{idFerramenta}")
+    public Ferramenta atualizar(@PathVariable Long idFerramenta, @Valid @RequestBody AtualizarFerramentaRequest request) {
+        return ferramentaService.atualizar(idFerramenta, request);
     }
 
     @GetMapping
